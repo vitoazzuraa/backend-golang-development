@@ -88,17 +88,17 @@ func main() {
 
 				mataKuliah = append(mataKuliah, matkul)
 
-			fmt.Println("Nama:", index)
-			fmt.Println("Nim:", nim)
-			fmt.Println("Ipk:", ipk)
+				fmt.Println("Nama:", index)
+				fmt.Println("Nim:", nim)
+				fmt.Println("Ipk:", ipk)
 
-			if isActive {
-				fmt.Println("Status: aktif")
-			} else {
-				fmt.Println("Status: nonaktif")
-			}
+				if isActive {
+					fmt.Println("Status: aktif")
+				} else {
+					fmt.Println("Status: nonaktif")
+				}
 
-			fmt.Println("Mata Kuliah Favorit:", mataKuliah)
+				fmt.Println("Mata Kuliah Favorit:", mataKuliah)
 			} else {
 				fmt.Println("Mahasiswa tidak ditemukan")
 			}
