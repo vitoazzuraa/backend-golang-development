@@ -10,8 +10,18 @@ func swap(a, b *int) {
 	*b = temp
 }
 
+func swapValue(a, b int) {
+	temp := a
+	a = b
+	b = temp
+}
+
 func updateSlice(s *[]string, newItem string) {
 	*s = append(*s, newItem)
+}
+
+func updateSliceValue(s []string, newItem string) {
+	s = append(s, newItem)
 }
 
 func main() {
@@ -24,8 +34,11 @@ func main() {
 	fmt.Print("Input angka b: ")
 	fmt.Scan(&b)
 
+	swapValue(a, b)
+	fmt.Println("Nilai a dan b setelah ditukar dengan function swapValue, a:", a, "& nilai b:", b)
+
 	swap(&a, &b)
-	fmt.Println("Nilai a dan b setelah ditukar, a:", a, "& nilai b:", b)
+	fmt.Println("Nilai a dan b setelah ditukar dengan function swap, a:", a, "& nilai b:", b)
 
 	var name string
 
@@ -34,7 +47,9 @@ func main() {
 	fmt.Print("Input kata untuk di masukkan ke slice: ")
 	fmt.Scan(&name)
 
-	updateSlice(&names, name)
+	updateSliceValue(names, name)
+	fmt.Println("Value slice sekarang:", names)
 
+	updateSlice(&names, name)
 	fmt.Println("Value slice sekarang:", names)
 }
