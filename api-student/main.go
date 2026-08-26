@@ -18,8 +18,17 @@ func main() {
 	})
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return ok(c, "API Students - Task 1", nil)
+		return ok(c, "API Students - Task 2", nil)
 	})
+
+	api := app.Group("/api/v1")
+	studentRoutes := api.Group("/students")
+	studentRoutes.Get("/", listStudents)
+	studentRoutes.Get("/:id", getStudent)
+	studentRoutes.Post("/", createStudent)
+	studentRoutes.Put("/:id", replaceStudent)
+	studentRoutes.Patch("/:id", patchStudent)
+	studentRoutes.Delete("/:id", deleteStudent)
 
 	log.Fatal(app.Listen(":3000"))
 }

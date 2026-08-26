@@ -42,3 +42,8 @@ type Meta struct {
 	Total      int `json:"total"`
 	TotalPages int `json:"total_pages"`
 }
+
+type ListQuery struct {
+	Page  int
+	Limit int
+}
