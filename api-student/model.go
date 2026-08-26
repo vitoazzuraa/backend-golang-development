@@ -44,6 +44,10 @@ type Meta struct {
 }
 
 type ListQuery struct {
-	Page  int
-	Limit int
+	Page     int
+	Limit    int
+	Search   string
+	Sort     string
+	Order    string
+	IsActive *bool
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -29,9 +30,50 @@ func paramID(c *fiber.Ctx) (int, bool) {
 	return id, true
 }
 
+func cocokPencarian(student Student, kata string) bool {
+	return strings.Contains(strings.ToLower(student.Name), strings.ToLower(kata))
+}
+
+func lessStudent(a, b Student, field string) bool {
+	switch field {
+	case "nim":
+		if a.NIM != b.NIM {
+			return a.NIM < b.NIM
+		}
+	case "name":
+		if a.Name != b.Name {
+			return a.Name < b.Name
+		}
+	case "grade":
+		if a.Grade != b.Grade {
+			return a.Grade < b.Grade
+		}
+	}
+
+	return a.ID < b.ID
+}
+
 func listStudents(c *fiber.Ctx) error {
 	q := parseListQuery(c)
-	total := len(students)
+	filtered := []Student{}
+	for _, student := range students {
+		if q.IsActive != nil && student.IsActive != *q.IsActive {
+			continue
+		}
+		if q.Search != "" && !cocokPencarian(student, q.Search) {
+			continue
+		}
+		filtered = append(filtered, student)
+	}
+
+	sort.SliceStable(filtered, func(i, j int) bool {
+		if q.Order == "desc" {
+			return lessStudent(filtered[j], filtered[i], q.Sort)
+		}
+		return lessStudent(filtered[i], filtered[j], q.Sort)
+	})
+
+	total := len(filtered)
 	totalPages := 0
 	if total > 0 {
 		totalPages = (total + q.Limit - 1) / q.Limit
@@ -47,7 +89,7 @@ func listStudents(c *fiber.Ctx) error {
 		end = total
 	}
 
-	return okList(c, "daftar student berhasil diambil", students[start:end], &Meta{
+	return okList(c, "daftar student berhasil diambil", filtered[start:end], &Meta{
 		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
 	})
 }

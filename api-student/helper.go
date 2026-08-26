@@ -1,6 +1,11 @@
 package main
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"strconv"
+	"strings"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 func ok(c *fiber.Ctx, message string, data any) error {
 	return c.Status(fiber.StatusOK).JSON(WebResponse{
@@ -41,10 +46,17 @@ func fail(c *fiber.Ctx, status int, message string) error {
 
 const maxPageLimit = 100
 
+var allowedSort = map[string]bool{
+	"id": true, "nim": true, "name": true, "grade": true,
+}
+
 func parseListQuery(c *fiber.Ctx) ListQuery {
 	q := ListQuery{
-		Page:  c.QueryInt("page", 1),
-		Limit: c.QueryInt("limit", 10),
+		Page:   c.QueryInt("page", 1),
+		Limit:  c.QueryInt("limit", 10),
+		Search: strings.TrimSpace(c.Query("search")),
+		Sort:   c.Query("sort", "id"),
+		Order:  strings.ToLower(c.Query("order", "asc")),
 	}
 
 	if q.Page < 1 {
@@ -55,6 +67,18 @@ func parseListQuery(c *fiber.Ctx) ListQuery {
 	}
 	if q.Limit > maxPageLimit {
 		q.Limit = maxPageLimit
+	}
+	if !allowedSort[q.Sort] {
+		q.Sort = "id"
+	}
+	if q.Order != "desc" {
+		q.Order = "asc"
+	}
+
+	if raw := c.Query("is_active"); raw != "" {
+		if v, err := strconv.ParseBool(raw); err == nil {
+			q.IsActive = &v
+		}
 	}
 
 	return q

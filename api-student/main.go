@@ -18,7 +18,7 @@ func main() {
 	})
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return ok(c, "API Students - Task 2", nil)
+		return ok(c, "API Students - Task 3", nil)
 	})
 
 	api := app.Group("/api/v1")
