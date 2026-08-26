@@ -12,7 +12,7 @@ type Student struct {
 }
 
 func (s Student) GetInfo() string {
-	return fmt.Sprintf("%v, %v, %f, %t", s.ID, s.Name, s.Grade, s.isActive)
+	return fmt.Sprintf("%v, %v, %f, %t", s.ID, s.Name, s.Grade, s.IsActive)
 }
 
 func (s *Student) UpdateGrade(newGrade float64) {
