@@ -23,7 +23,7 @@ func (s *Student) Activate() {
 	s.IsActive = true
 }
 
-func (s *Student) Deactive() {
+func (s *Student) Deactivate() {
 	s.IsActive = false
 }
 
@@ -67,7 +67,7 @@ func main() {
 			s.Activate()
 			fmt.Println("Status", s.IsActive)
 		case 2:
-			s.Deactive()
+			s.Deactivate()
 			fmt.Println("Status", s.IsActive)
 		case 0:
 			return
