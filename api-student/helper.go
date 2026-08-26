@@ -44,6 +44,14 @@ func fail(c *fiber.Ctx, status int, message string) error {
 	})
 }
 
+func failValidation(c *fiber.Ctx, errs map[string]string) error {
+	return c.Status(fiber.StatusUnprocessableEntity).JSON(WebResponse{
+		Success: false,
+		Message: "validasi gagal",
+		Errors:  errs,
+	})
+}
+
 const maxPageLimit = 100
 
 var allowedSort = map[string]bool{

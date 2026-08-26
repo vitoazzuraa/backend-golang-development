@@ -30,6 +30,16 @@ func paramID(c *fiber.Ctx) (int, bool) {
 	return id, true
 }
 
+func nimExists(nim, exceptID int) bool {
+	for _, student := range students {
+		if student.ID != exceptID && student.NIM == nim {
+			return true
+		}
+	}
+
+	return false
+}
+
 func cocokPencarian(student Student, kata string) bool {
 	return strings.Contains(strings.ToLower(student.Name), strings.ToLower(kata))
 }
@@ -115,8 +125,12 @@ func createStudent(c *fiber.Ctx) error {
 	}
 
 	req.Name = strings.TrimSpace(req.Name)
-	if req.NIM < 1 || req.Name == "" {
-		return fail(c, fiber.StatusBadRequest, "nim dan name wajib diisi")
+	errs := validateStudentFields(req.NIM, req.Name, req.Grade)
+	if len(errs) > 0 {
+		return failValidation(c, errs)
+	}
+	if nimExists(req.NIM, 0) {
+		return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
 	}
 
 	student := Student{
@@ -130,6 +144,22 @@ func createStudent(c *fiber.Ctx) error {
 	nextID++
 
 	return created(c, "student berhasil dibuat", student, "/api/v1/students/"+strconv.Itoa(student.ID))
+}
+
+func validateStudentFields(nim int, name string, grade float64) map[string]string {
+	errs := map[string]string{}
+
+	if nim < 1 {
+		errs["nim"] = "wajib berupa angka positif"
+	}
+	if strings.TrimSpace(name) == "" {
+		errs["name"] = "wajib diisi"
+	}
+	if grade < 0 || grade > 100 {
+		errs["grade"] = "harus berada di antara 0 dan 100"
+	}
+
+	return errs
 }
 
 func replaceStudent(c *fiber.Ctx) error {
@@ -149,8 +179,15 @@ func replaceStudent(c *fiber.Ctx) error {
 	}
 
 	req.Name = strings.TrimSpace(req.Name)
-	if req.NIM < 1 || req.Name == "" || req.IsActive == nil {
-		return fail(c, fiber.StatusBadRequest, "nim, name, dan is_active wajib dikirim pada PUT")
+	errs := validateStudentFields(req.NIM, req.Name, req.Grade)
+	if req.IsActive == nil {
+		errs["is_active"] = "wajib dikirim pada PUT"
+	}
+	if len(errs) > 0 {
+		return failValidation(c, errs)
+	}
+	if nimExists(req.NIM, id) {
+		return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
 	}
 
 	students[i] = Student{
@@ -185,17 +222,37 @@ func patchStudent(c *fiber.Ctx) error {
 	}
 
 	updated := students[i]
+	errs := map[string]string{}
 	if req.NIM != nil {
-		updated.NIM = *req.NIM
+		if *req.NIM < 1 {
+			errs["nim"] = "harus berupa angka positif"
+		} else {
+			updated.NIM = *req.NIM
+		}
 	}
 	if req.Name != nil {
-		updated.Name = strings.TrimSpace(*req.Name)
+		name := strings.TrimSpace(*req.Name)
+		if name == "" {
+			errs["name"] = "tidak boleh kosong"
+		} else {
+			updated.Name = name
+		}
 	}
 	if req.Grade != nil {
-		updated.Grade = *req.Grade
+		if *req.Grade < 0 || *req.Grade > 100 {
+			errs["grade"] = "harus berada di antara 0 dan 100"
+		} else {
+			updated.Grade = *req.Grade
+		}
 	}
 	if req.IsActive != nil {
 		updated.IsActive = *req.IsActive
+	}
+	if len(errs) > 0 {
+		return failValidation(c, errs)
+	}
+	if req.NIM != nil && nimExists(updated.NIM, id) {
+		return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
 	}
 
 	students[i] = updated
