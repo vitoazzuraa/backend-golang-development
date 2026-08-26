@@ -4,14 +4,17 @@ Dokumentasi penggunaan bantuan AI (opencode) dalam pengembangan project ini.
 
 ## Prinsip Penggunaan
 
-Selama sesi ini, AI **tidak pernah diminta untuk menulis kode langsung** ke file.
-AI hanya diminta memberikan:
+Pada pekerjaan Week 1, AI **tidak pernah diminta untuk menulis kode langsung**
+ke file. AI hanya diminta memberikan:
 
 1. **Petunjuk / kisi-kisi** cara mengimplementasikan suatu fungsi
 2. **Review kode** untuk menemukan kesalahan
 3. **Koreksi konsep** jika ada pemahaman yang keliru
 
-Semua kode tetap ditulis sendiri di file, AI hanya berperan sebagai pemandu.
+Pada pengembangan Week 2, AI berperan sebagai pengarah, reviewer, dan
+pendamping untuk memahami materi yang masih baru. AI membantu memetakan
+struktur project, menjelaskan pola implementasi dari contoh modul, dan
+memeriksa hasil pengujian API.
 
 ## Daftar Bantuan yang Diberikan
 
@@ -50,6 +53,20 @@ Semua kode tetap ditulis sendiri di file, AI hanya berperan sebagai pemandu.
 - Meminta petunjuk di mana menambahkan versi pass by value sebagai pembanding dari versi pointer yang sudah ada.
 - AI menyarankan lokasi penambahan: fungsi `swapValue(a, b int)` dan `updateSliceValue(s []string, newItem string)` di dekat fungsi pointer yang sudah ada, lalu menampilkan perbedaan hasil di `main`.
 
+### 7. Week 2 - API Student
+
+- Membandingkan implementasi API dengan persyaratan tugas mandiri Week 2.
+- Membantu mengubah API `users` menjadi API `students` dengan field NIM, Name,
+  Grade, dan IsActive.
+- Membantu menerapkan validasi NIM unik dengan status `409 Conflict`, validasi
+  field dengan status `422`, pagination, pencarian, filter, dan pengurutan.
+- Menemukan dan memperbaiki bug response validasi serta mutasi sebagian pada
+  PATCH yang gagal.
+- Membantu menulis kontrak endpoint pada `README.md`.
+- Membantu pengujian API menggunakan `curl.exe`, termasuk memahami opsi `-i`,
+  pengiriman JSON melalui PowerShell, header `Location` dan `X-Request-Id`,
+  serta membaca status HTTP dari response.
+
 ## Ringkasan Peran AI
 
 | Tipe Bantuan | Contoh |
@@ -57,5 +74,4 @@ Semua kode tetap ditulis sendiri di file, AI hanya berperan sebagai pemandu.
 | Petunjuk / kisi-kisi | Cara mengisi `updateSlice`, outline method struct |
 | Review & koreksi kode | Bug `swap`, return type `GetInfo`, `pilihan` tidak discan |
 | Koreksi konsep | Kapan receiver harus pointer, perbedaan by value vs by pointer |
-
-**Yang tidak dilakukan AI:** menulis kode ke dalam file project.
+| Pengujian API | Menjalankan `curl.exe`, opsi `-i`, header, dan membaca status HTTP |
