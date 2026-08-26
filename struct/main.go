@@ -8,7 +8,7 @@ type Student struct {
 	ID       int
 	Name     string
 	Grade    float64
-	isActive bool
+	IsActive bool
 }
 
 func (s Student) GetInfo() string {
@@ -20,11 +20,11 @@ func (s *Student) UpdateGrade(newGrade float64) {
 }
 
 func (s *Student) Activate() {
-	s.isActive = true
+	s.IsActive = true
 }
 
 func (s *Student) Deactive() {
-	s.isActive = false
+	s.IsActive = false
 }
 
 func main() {
@@ -65,10 +65,10 @@ func main() {
 		switch pilihan {
 		case 1:
 			s.Activate()
-			fmt.Println("Status", s.isActive)
+			fmt.Println("Status", s.IsActive)
 		case 2:
 			s.Deactive()
-			fmt.Println("Status", s.isActive)
+			fmt.Println("Status", s.IsActive)
 		case 0:
 			return
 		default:
