@@ -28,6 +28,14 @@ type studentPostgresRepository struct {
 	pool *pgxpool.Pool
 }
 
+var sortColumns = map[string]string{
+	"id":         "id",
+	"nim":        "nim",
+	"name":       "name",
+	"grade":      "grade",
+	"created_at": "created_at",
+}
+
 func NewStudentRepository(pool *pgxpool.Pool) StudentRepository {
 	return &studentPostgresRepository{pool: pool}
 }
@@ -35,16 +43,30 @@ func NewStudentRepository(pool *pgxpool.Pool) StudentRepository {
 func (r *studentPostgresRepository) FindAll(
 	ctx context.Context, q model.ListQuery,
 ) ([]model.Student, int, error) {
+	where, args := buildFilter(q)
+
 	var total int
-	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM students`).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM students`+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("menghitung student: %w", err)
 	}
 
+	column, ok := sortColumns[q.Sort]
+	if !ok {
+		column = sortColumns["id"]
+	}
+	direction := "ASC"
+	if q.Order == "desc" {
+		direction = "DESC"
+	}
+
+	listArgs := append([]any{}, args...)
+	listArgs = append(listArgs, q.Limit, q.Offset())
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, nim, name, grade, is_active, created_at
-		FROM students
-		ORDER BY id ASC
-		LIMIT $1 OFFSET $2`, q.Limit, q.Offset())
+		FROM students`+where+fmt.Sprintf(
+		" ORDER BY %s %s LIMIT $%d OFFSET $%d",
+		column, direction, len(args)+1, len(args)+2,
+	), listArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("mengambil daftar student: %w", err)
 	}
@@ -70,6 +92,22 @@ func (r *studentPostgresRepository) FindAll(
 	}
 
 	return result, total, nil
+}
+
+func buildFilter(q model.ListQuery) (string, []any) {
+	where := " WHERE 1 = 1"
+	args := []any{}
+
+	if q.Search != "" {
+		where += fmt.Sprintf(" AND name ILIKE $%d", len(args)+1)
+		args = append(args, "%"+q.Search+"%")
+	}
+	if q.IsActive != nil {
+		where += fmt.Sprintf(" AND is_active = $%d", len(args)+1)
+		args = append(args, *q.IsActive)
+	}
+
+	return where, args
 }
 
 func (r *studentPostgresRepository) FindByID(

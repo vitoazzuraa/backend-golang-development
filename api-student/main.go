@@ -6,6 +6,7 @@ import (
 	"mime"
 	"time"
 
+	"backend-go/api-student/app/repository"
 	"backend-go/api-student/config"
 	"backend-go/api-student/database"
 	"github.com/gofiber/fiber/v2"
@@ -39,6 +40,8 @@ func main() {
 		log.Fatalf("database: %v", err)
 	}
 	defer pool.Close()
+	studentRepository := repository.NewStudentRepository(pool)
+	studentHandler := NewStudentHandler(studentRepository)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -52,7 +55,7 @@ func main() {
 	app.Use(requestid.New())
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return ok(c, "API Students - Task 4", nil)
+		return ok(c, "API Students - PostgreSQL", nil)
 	})
 
 	api := app.Group("/api/v1")
@@ -68,12 +71,12 @@ func main() {
 	})
 
 	studentRoutes := api.Group("/students", requireJSON)
-	studentRoutes.Get("/", listStudents)
-	studentRoutes.Get("/:id", getStudent)
-	studentRoutes.Post("/", createStudent)
-	studentRoutes.Put("/:id", replaceStudent)
-	studentRoutes.Patch("/:id", patchStudent)
-	studentRoutes.Delete("/:id", deleteStudent)
+	studentRoutes.Get("/", studentHandler.List)
+	studentRoutes.Get("/:id", studentHandler.Get)
+	studentRoutes.Post("/", studentHandler.Create)
+	studentRoutes.Put("/:id", studentHandler.Replace)
+	studentRoutes.Patch("/:id", studentHandler.Patch)
+	studentRoutes.Delete("/:id", studentHandler.Delete)
 
 	port := config.GetEnv("APP_PORT", "3000")
 	log.Fatal(app.Listen(":" + port))

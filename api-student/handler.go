@@ -1,152 +1,32 @@
 package main
 
 import (
-	"sort"
+	"errors"
 	"strconv"
 	"strings"
-	"time"
 
 	"backend-go/api-student/app/model"
+	"backend-go/api-student/app/repository"
 	"github.com/gofiber/fiber/v2"
 )
 
-var students []model.Student
-var nextID = 1
-
-func findStudentIndex(id int) int {
-	for i := range students {
-		if students[i].ID == id {
-			return i
-		}
-	}
-
-	return -1
+type StudentHandler struct {
+	repo repository.StudentRepository
 }
 
-func paramID(c *fiber.Ctx) (int, bool) {
-	id, err := strconv.Atoi(c.Params("id"))
-	if err != nil || id < 1 {
-		return 0, false
-	}
-
-	return id, true
+func NewStudentHandler(repo repository.StudentRepository) *StudentHandler {
+	return &StudentHandler{repo: repo}
 }
 
-func nimExists(nim, exceptID int) bool {
-	for _, student := range students {
-		if student.ID != exceptID && student.NIM == nim {
-			return true
-		}
-	}
-
-	return false
-}
-
-func cocokPencarian(student model.Student, kata string) bool {
-	return strings.Contains(strings.ToLower(student.Name), strings.ToLower(kata))
-}
-
-func lessStudent(a, b model.Student, field string) bool {
-	switch field {
-	case "nim":
-		if a.NIM != b.NIM {
-			return a.NIM < b.NIM
-		}
-	case "name":
-		if a.Name != b.Name {
-			return a.Name < b.Name
-		}
-	case "grade":
-		if a.Grade != b.Grade {
-			return a.Grade < b.Grade
-		}
-	}
-
-	return a.ID < b.ID
-}
-
-func listStudents(c *fiber.Ctx) error {
-	q := parseListQuery(c)
-	filtered := []model.Student{}
-	for _, student := range students {
-		if q.IsActive != nil && student.IsActive != *q.IsActive {
-			continue
-		}
-		if q.Search != "" && !cocokPencarian(student, q.Search) {
-			continue
-		}
-		filtered = append(filtered, student)
-	}
-
-	sort.SliceStable(filtered, func(i, j int) bool {
-		if q.Order == "desc" {
-			return lessStudent(filtered[j], filtered[i], q.Sort)
-		}
-		return lessStudent(filtered[i], filtered[j], q.Sort)
-	})
-
-	total := len(filtered)
-	totalPages := 0
-	if total > 0 {
-		totalPages = (total + q.Limit - 1) / q.Limit
-	}
-
-	start := (q.Page - 1) * q.Limit
-	if start > total {
-		start = total
-	}
-
-	end := start + q.Limit
-	if end > total {
-		end = total
-	}
-
-	return okList(c, "daftar student berhasil diambil", filtered[start:end], &model.Meta{
-		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
-	})
-}
-
-func getStudent(c *fiber.Ctx) error {
-	id, valid := paramID(c)
-	if !valid {
-		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
-	}
-
-	i := findStudentIndex(id)
-	if i == -1 {
+func translateRepositoryError(c *fiber.Ctx, err error, message string) error {
+	switch {
+	case errors.Is(err, repository.ErrNotFound):
 		return fail(c, fiber.StatusNotFound, "student tidak ditemukan")
-	}
-
-	return ok(c, "student ditemukan", students[i])
-}
-
-func createStudent(c *fiber.Ctx) error {
-	var req model.CreateStudentRequest
-	if err := c.BodyParser(&req); err != nil {
-		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
-	}
-
-	req.Name = strings.TrimSpace(req.Name)
-	errs := validateStudentFields(req.NIM, req.Name, req.Grade)
-	if len(errs) > 0 {
-		return failValidation(c, errs)
-	}
-	if nimExists(req.NIM, 0) {
+	case errors.Is(err, repository.ErrDuplicate):
 		return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
+	default:
+		return fail(c, fiber.StatusInternalServerError, message)
 	}
-
-	student := model.Student{
-		ID:        nextID,
-		NIM:       req.NIM,
-		Name:      req.Name,
-		Grade:     req.Grade,
-		IsActive:  true,
-		CreatedAt: time.Now(),
-	}
-	students = append(students, student)
-	nextID++
-
-	return created(c, "student berhasil dibuat", student, "/api/v1/students/"+strconv.Itoa(student.ID))
 }
 
 func validateStudentFields(nim int, name string, grade float64) map[string]string {
@@ -165,15 +45,88 @@ func validateStudentFields(nim int, name string, grade float64) map[string]strin
 	return errs
 }
 
-func replaceStudent(c *fiber.Ctx) error {
+func paramID(c *fiber.Ctx) (int, bool) {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil || id < 1 {
+		return 0, false
+	}
+
+	return id, true
+}
+
+func (h *StudentHandler) List(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
+
+	q := parseListQuery(c)
+	students, total, err := h.repo.FindAll(ctx, q)
+	if err != nil {
+		return fail(c, fiber.StatusInternalServerError, "gagal mengambil daftar student")
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + q.Limit - 1) / q.Limit
+	}
+
+	return okList(c, "daftar student berhasil diambil", students, &model.Meta{
+		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
+	})
+}
+
+func (h *StudentHandler) Get(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
+
 	id, valid := paramID(c)
 	if !valid {
 		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
 	}
 
-	i := findStudentIndex(id)
-	if i == -1 {
-		return fail(c, fiber.StatusNotFound, "student tidak ditemukan")
+	student, err := h.repo.FindByID(ctx, id)
+	if err != nil {
+		return translateRepositoryError(c, err, "gagal mengambil student")
+	}
+
+	return ok(c, "student ditemukan", student)
+}
+
+func (h *StudentHandler) Create(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
+
+	var req model.CreateStudentRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	errs := validateStudentFields(req.NIM, req.Name, req.Grade)
+	if len(errs) > 0 {
+		return failValidation(c, errs)
+	}
+
+	student, err := h.repo.Create(ctx, model.Student{
+		NIM:      req.NIM,
+		Name:     req.Name,
+		Grade:    req.Grade,
+		IsActive: true,
+	})
+	if err != nil {
+		return translateRepositoryError(c, err, "gagal menyimpan student")
+	}
+
+	return created(c, "student berhasil dibuat", student,
+		"/api/v1/students/"+strconv.Itoa(student.ID))
+}
+
+func (h *StudentHandler) Replace(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
+
+	id, valid := paramID(c)
+	if !valid {
+		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
 	}
 
 	var req model.ReplaceStudentRequest
@@ -189,49 +142,49 @@ func replaceStudent(c *fiber.Ctx) error {
 	if len(errs) > 0 {
 		return failValidation(c, errs)
 	}
-	if nimExists(req.NIM, id) {
-		return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
+
+	student, err := h.repo.Update(ctx, model.Student{
+		ID:       id,
+		NIM:      req.NIM,
+		Name:     req.Name,
+		Grade:    req.Grade,
+		IsActive: *req.IsActive,
+	})
+	if err != nil {
+		return translateRepositoryError(c, err, "gagal memperbarui student")
 	}
 
-	students[i] = model.Student{
-		ID:        id,
-		NIM:       req.NIM,
-		Name:      req.Name,
-		Grade:     req.Grade,
-		IsActive:  *req.IsActive,
-		CreatedAt: students[i].CreatedAt,
-	}
-
-	return ok(c, "student berhasil diganti seluruhnya", students[i])
+	return ok(c, "student berhasil diganti seluruhnya", student)
 }
 
-func patchStudent(c *fiber.Ctx) error {
+func (h *StudentHandler) Patch(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
+
 	id, valid := paramID(c)
 	if !valid {
 		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
-	}
-
-	i := findStudentIndex(id)
-	if i == -1 {
-		return fail(c, fiber.StatusNotFound, "student tidak ditemukan")
 	}
 
 	var req model.PatchStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
-
 	if req.NIM == nil && req.Name == nil && req.Grade == nil && req.IsActive == nil {
 		return fail(c, fiber.StatusBadRequest, "tidak ada field yang diubah")
 	}
 
-	updated := students[i]
+	student, err := h.repo.FindByID(ctx, id)
+	if err != nil {
+		return translateRepositoryError(c, err, "gagal mengambil student")
+	}
+
 	errs := map[string]string{}
 	if req.NIM != nil {
 		if *req.NIM < 1 {
 			errs["nim"] = "harus berupa angka positif"
 		} else {
-			updated.NIM = *req.NIM
+			student.NIM = *req.NIM
 		}
 	}
 	if req.Name != nil {
@@ -239,43 +192,43 @@ func patchStudent(c *fiber.Ctx) error {
 		if name == "" {
 			errs["name"] = "tidak boleh kosong"
 		} else {
-			updated.Name = name
+			student.Name = name
 		}
 	}
 	if req.Grade != nil {
 		if *req.Grade < 0 || *req.Grade > 100 {
 			errs["grade"] = "harus berada di antara 0 dan 100"
 		} else {
-			updated.Grade = *req.Grade
+			student.Grade = *req.Grade
 		}
 	}
 	if req.IsActive != nil {
-		updated.IsActive = *req.IsActive
+		student.IsActive = *req.IsActive
 	}
 	if len(errs) > 0 {
 		return failValidation(c, errs)
 	}
-	if req.NIM != nil && nimExists(updated.NIM, id) {
-		return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
+
+	student, err = h.repo.Update(ctx, student)
+	if err != nil {
+		return translateRepositoryError(c, err, "gagal memperbarui student")
 	}
 
-	students[i] = updated
-
-	return ok(c, "student berhasil diperbarui sebagian", students[i])
+	return ok(c, "student berhasil diperbarui sebagian", student)
 }
 
-func deleteStudent(c *fiber.Ctx) error {
+func (h *StudentHandler) Delete(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
+
 	id, valid := paramID(c)
 	if !valid {
 		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
 	}
 
-	i := findStudentIndex(id)
-	if i == -1 {
-		return fail(c, fiber.StatusNotFound, "student tidak ditemukan")
+	if err := h.repo.Delete(ctx, id); err != nil {
+		return translateRepositoryError(c, err, "gagal menghapus student")
 	}
-
-	students = append(students[:i], students[i+1:]...)
 
 	return noContent(c)
 }

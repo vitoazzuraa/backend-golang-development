@@ -1,6 +1,6 @@
 # Pemrograman Backend Lanjut dengan Go
 
-Repository ini berisi latihan Week 1 dan API Student Week 2.
+Repository ini berisi latihan Week 1 dan API Student berbasis PostgreSQL.
 
 ## Struktur Project
 
@@ -13,9 +13,13 @@ latihan-fiber/
 
 api-student/
   main.go
-  model.go
   helper.go
   handler.go
+  app/model/student.go
+  app/repository/student_repository.go
+  config/env.go
+  database/postgres.go
+  migrations/001_create_students.sql
 ```
 
 ## Menjalankan Week 1
@@ -32,6 +36,39 @@ go run ./latihan-fiber/struct
 ```powershell
 go run ./api-student
 ```
+
+## Menyiapkan Database
+
+Buat database dan jalankan migration dari root repository:
+
+```powershell
+psql -h localhost -U postgres -c "CREATE DATABASE go_backend;"
+psql -h localhost -U postgres -d go_backend -f .\api-student\migrations\001_create_students.sql
+```
+
+Database menyimpan data student secara permanen. Migration membuat tabel
+`students`, constraint unik pada `nim`, dan index untuk pencarian nama.
+
+## Environment Variable
+
+Buat `.env` berdasarkan `.env.example`. File `.env` tidak boleh di-commit.
+
+| Variabel | Kegunaan | Contoh aman |
+|---|---|---|
+| `APP_PORT` | Port aplikasi | `3000` |
+| `DB_HOST` | Host PostgreSQL | `localhost` |
+| `DB_PORT` | Port PostgreSQL | `5432` |
+| `DB_USER` | User database | `postgres` |
+| `DB_PASSWORD` | Password database | Diisi lokal, jangan di-upload |
+| `DB_NAME` | Nama database | `go_backend` |
+| `DB_SSLMODE` | Mode SSL koneksi | `disable` untuk lokal |
+| `DB_MAX_CONNS` | Maksimum koneksi pool | `10` |
+
+## Error Database
+
+Repository menerjemahkan error PostgreSQL menjadi error aplikasi. Data tidak
+ditemukan menghasilkan `404`, NIM duplikat menghasilkan `409`, dan database
+yang tidak dapat dihubungi pada health check menghasilkan `503`.
 
 ## Kontrak API Student
 

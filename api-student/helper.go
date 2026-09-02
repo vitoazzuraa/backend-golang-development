@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"backend-go/api-student/app/model"
 	"github.com/gofiber/fiber/v2"
@@ -56,7 +58,7 @@ func failValidation(c *fiber.Ctx, errs map[string]string) error {
 const maxPageLimit = 100
 
 var allowedSort = map[string]bool{
-	"id": true, "nim": true, "name": true, "grade": true,
+	"id": true, "nim": true, "name": true, "grade": true, "created_at": true,
 }
 
 func parseListQuery(c *fiber.Ctx) model.ListQuery {
@@ -91,4 +93,8 @@ func parseListQuery(c *fiber.Ctx) model.ListQuery {
 	}
 
 	return q
+}
+
+func reqCtx(c *fiber.Ctx) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(c.UserContext(), 5*time.Second)
 }
