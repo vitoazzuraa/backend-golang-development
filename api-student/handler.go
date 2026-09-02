@@ -4,11 +4,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
+	"backend-go/api-student/app/model"
 	"github.com/gofiber/fiber/v2"
 )
 
-var students []Student
+var students []model.Student
 var nextID = 1
 
 func findStudentIndex(id int) int {
@@ -40,11 +42,11 @@ func nimExists(nim, exceptID int) bool {
 	return false
 }
 
-func cocokPencarian(student Student, kata string) bool {
+func cocokPencarian(student model.Student, kata string) bool {
 	return strings.Contains(strings.ToLower(student.Name), strings.ToLower(kata))
 }
 
-func lessStudent(a, b Student, field string) bool {
+func lessStudent(a, b model.Student, field string) bool {
 	switch field {
 	case "nim":
 		if a.NIM != b.NIM {
@@ -65,7 +67,7 @@ func lessStudent(a, b Student, field string) bool {
 
 func listStudents(c *fiber.Ctx) error {
 	q := parseListQuery(c)
-	filtered := []Student{}
+	filtered := []model.Student{}
 	for _, student := range students {
 		if q.IsActive != nil && student.IsActive != *q.IsActive {
 			continue
@@ -99,7 +101,7 @@ func listStudents(c *fiber.Ctx) error {
 		end = total
 	}
 
-	return okList(c, "daftar student berhasil diambil", filtered[start:end], &Meta{
+	return okList(c, "daftar student berhasil diambil", filtered[start:end], &model.Meta{
 		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
 	})
 }
@@ -119,7 +121,7 @@ func getStudent(c *fiber.Ctx) error {
 }
 
 func createStudent(c *fiber.Ctx) error {
-	var req CreateStudentRequest
+	var req model.CreateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
@@ -133,12 +135,13 @@ func createStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
 	}
 
-	student := Student{
-		ID:       nextID,
-		NIM:      req.NIM,
-		Name:     req.Name,
-		Grade:    req.Grade,
-		IsActive: true,
+	student := model.Student{
+		ID:        nextID,
+		NIM:       req.NIM,
+		Name:      req.Name,
+		Grade:     req.Grade,
+		IsActive:  true,
+		CreatedAt: time.Now(),
 	}
 	students = append(students, student)
 	nextID++
@@ -173,7 +176,7 @@ func replaceStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusNotFound, "student tidak ditemukan")
 	}
 
-	var req ReplaceStudentRequest
+	var req model.ReplaceStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
@@ -190,12 +193,13 @@ func replaceStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
 	}
 
-	students[i] = Student{
-		ID:       id,
-		NIM:      req.NIM,
-		Name:     req.Name,
-		Grade:    req.Grade,
-		IsActive: *req.IsActive,
+	students[i] = model.Student{
+		ID:        id,
+		NIM:       req.NIM,
+		Name:      req.Name,
+		Grade:     req.Grade,
+		IsActive:  *req.IsActive,
+		CreatedAt: students[i].CreatedAt,
 	}
 
 	return ok(c, "student berhasil diganti seluruhnya", students[i])
@@ -212,7 +216,7 @@ func patchStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusNotFound, "student tidak ditemukan")
 	}
 
-	var req PatchStudentRequest
+	var req model.PatchStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
