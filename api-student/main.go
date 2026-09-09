@@ -29,6 +29,8 @@ func main() {
 	studentService := service.NewStudentService(studentRepository)
 
 	app := config.NewApp(logger, pool, studentService)
+	
+	logger.Info("server berjalan")
 
 	port := config.GetEnv("APP_PORT", "3000")
 
