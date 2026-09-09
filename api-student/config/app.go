@@ -5,9 +5,9 @@ import (
 
 	"backend-go/api-student/app/service"
 	"backend-go/api-student/helper"
+	"backend-go/api-student/middleware"
 	"backend-go/api-student/route"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,7 +17,7 @@ func NewApp(logger *slog.Logger, pool *pgxpool.Pool, studentService *service.Stu
 		ErrorHandler: newErrorHandler(logger),
 	})
 
-	app.Use(requestid.New())
+	middleware.Register(app, logger)
 
 	route.Register(app, pool, studentService)
 
@@ -31,7 +31,6 @@ func NewApp(logger *slog.Logger, pool *pgxpool.Pool, studentService *service.Stu
 func newErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
 		status := fiber.StatusInternalServerError
-
 		message := "terjadi error pada server"
 
 		if e, ok := err.(*fiber.Error); ok {
