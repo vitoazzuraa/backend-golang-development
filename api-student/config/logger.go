@@ -2,25 +2,32 @@ package config
 
 import (
 	"io"
-  	"log/slog"
-  	"os"
-  	"path/filepath"
-  	"strings"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 
-  	"gopkg.in/natefinch/lumberjack.v2"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func NewLogger() *slog.Logger {
-	if err := os.MkdirAll("logs", 0755); err != nil {
+	_, filename, _, _ := runtime.Caller(0)
+
+	base := filepath.Dir(filepath.Dir(filename))
+
+	logPath := filepath.Join(base, "logs", "app.log")
+
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
 		panic("gagal membuat folder logs: " + err.Error())
 	}
 
 	rotator := &lumberjack.Logger{
-		Filename: filepath.Join("logs", "app.log"),
-		MaxSize: 10,
+		Filename:   logPath,
+		MaxSize:    10,
 		MaxBackups: 5,
-		MaxAge: 14,
-		Compress: true,
+		MaxAge:     14,
+		Compress:   true,
 	}
 
 	writer := io.MultiWriter(os.Stdout, rotator)
@@ -32,7 +39,7 @@ func NewLogger() *slog.Logger {
 	logger := slog.New(handler)
 
 	slog.SetDefault(logger)
-
+	
 	return logger
 }
 
