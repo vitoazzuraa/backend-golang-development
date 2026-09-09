@@ -1,13 +1,13 @@
 package service
 
 import (
-  "testing"
+	"testing"
 
-  "backend-go/api-student/app/model"
+	"backend-go/api-student/app/model"
 )
 
 func TestCountTotalPages(t *testing.T) {
-	cases := []struct{ total, limit, want int } {
+	cases := []struct{ total, limit, want int }{
 		{0, 10, 0},
 		{10, 10, 1},
 		{11, 10, 2},
@@ -35,10 +35,10 @@ func TestValidateCreate(t *testing.T) {
 
 func TestApplyPatch(t *testing.T) {
 	initial := model.Student{
-		ID: 1,
-		NIM: 1,
-		Name: "Vito",
-		Grade: 90,
+		ID:       1,
+		NIM:      1,
+		Name:     "Vito",
+		Grade:    90,
 		IsActive: true,
 	}
 
@@ -47,7 +47,7 @@ func TestApplyPatch(t *testing.T) {
 	result, errs := ApplyPatch(initial, model.PatchStudentRequest{
 		IsActive: &inactive,
 	})
-	
+
 	if len(errs) != 0 {
 		t.Fatalf("want no error, got %v", errs)
 	}

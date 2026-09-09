@@ -30,17 +30,17 @@ func ValidateCreate(req model.CreateStudentRequest) map[string]string {
 
 func ValidateReplace(req model.ReplaceStudentRequest) map[string]string {
 	errs := ValidateStudentFields(req.NIM, req.Name, req.Grade)
-	
+
 	if req.IsActive == nil {
 		errs["is_active"] = "wajib dikirim pada PUT"
 	}
-	
+
 	return errs
 }
 
 func ApplyPatch(current model.Student, req model.PatchStudentRequest) (model.Student, map[string]string) {
 	errs := map[string]string{}
-	
+
 	if req.NIM != nil {
 		if *req.NIM < 1 {
 			errs["nim"] = "harus berupa angka positif"
