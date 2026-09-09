@@ -1,13 +1,13 @@
 package config
 
 import (
-  "io"
-  "log/slog"
-  "os"
-  "path/filepath"
-  "strings"
+	"io"
+  	"log/slog"
+  	"os"
+  	"path/filepath"
+  	"strings"
 
-  "gopkg.in/natefinch/lumberjack.v2"
+  	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func NewLogger() *slog.Logger {
