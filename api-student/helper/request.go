@@ -25,8 +25,13 @@ func ParamID(c *fiber.Ctx) (int, bool) {
 
 const maxPageLimit = 100
 
+// Harus sinkron dengan sortColumns di app/repository/student_repository.go.
 var allowedSort = map[string]bool{
-	"id": true, "nim": true, "name": true, "grade": true, "created_at": true,
+	"id":         true,
+	"nim":        true,
+	"name":       true,
+	"grade":      true,
+	"created_at": true,
 }
 
 func ParseListQuery(c *fiber.Ctx) model.ListQuery {

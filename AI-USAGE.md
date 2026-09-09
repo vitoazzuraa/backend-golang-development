@@ -67,11 +67,40 @@ memeriksa hasil pengujian API.
   pengiriman JSON melalui PowerShell, header `Location` dan `X-Request-Id`,
   serta membaca status HTTP dari response.
 
+### 8. Week 4 - Clean Architecture sebagai mentor
+
+- Peran AI sebagai mentor bertahap, bukan worker. Setiap langkah dirujuk ke
+  bagian modul agar mudah dicek ulang.
+- Membagi Modul 4 menjadi langkah kecil: kerangka folder, `helper`,
+  `rules` murni, test, `service`, `middleware`, `route`, `logger`,
+  `app`, `main` ramping, hapus file lama.
+- Review tiap file sebelum lanjut. Temuan utama:
+  - `helper/request.go` kurang import `time` dan belum definisikan
+    `maxPageLimit` serta `allowedSort` student.
+  - `student_service.go` jalur import `helper` salah, import belum terpakai,
+    panggil `fail` lama, hitung halaman manual, `translateError` belum ada,
+    `Patch` belum pakai `ApplyPatch` dan `IsEmptyPatch`.
+  - `route/route.go` masih tempelan tanpa fungsi `Register` dan nama lama.
+  - `config/app.go` belum pakai `middleware.Register`.
+  - `config/logger.go` nama file `app.Log` harus `app.log`.
+- Koreksi konsep: beda method dan fungsi, beda adapter dan use case,
+  kenapa dua whitelist tidak digabung, kenapa `ORDER BY` butuh whitelist,
+  kenapa `TrimSpace` di rules tidak terbawa, kenapa `CountTotalPages`
+  harus jaga limit agar tidak panic.
+- Bantuan efektivitas: urutan CRUD, receiver `s` untuk service, `gofmt`,
+  beda `go build` dan `go vet` dan `gofmt -l` serta `gofmt -w`,
+  cara baca error `&` di PowerShell dengan kutip URL.
+- Pengujian: `go vet`, `go build`, `go test` tiga PASS,
+  `curl` health dan list, cek `api-student/logs/app.log` ada baris
+  `http_request` dengan `request_id`, `method`, `path`, `status`, `duration`.
+- Lokasi log disesuaikan ke `api-student/logs/app.log` agar tunggal
+  untuk struktur monorepo ini.
+
 ## Ringkasan Peran AI
 
 | Tipe Bantuan | Contoh |
 |---|---|
-| Petunjuk / kisi-kisi | Cara mengisi `updateSlice`, outline method struct |
-| Review & koreksi kode | Bug `swap`, return type `GetInfo`, `pilihan` tidak discan |
-| Koreksi konsep | Kapan receiver harus pointer, perbedaan by value vs by pointer |
-| Pengujian API | Menjalankan `curl.exe`, opsi `-i`, header, dan membaca status HTTP |
+| Petunjuk / kisi-kisi | Cara mengisi `updateSlice`, outline method struct, pecah Modul 4 per langkah |
+| Review & koreksi kode | Bug `swap`, return type `GetInfo`, `pilihan` tidak discan, import dan return di service dan route |
+| Koreksi konsep | Kapan receiver harus pointer, perbedaan by value vs by pointer, batas layer dan whitelist |
+| Pengujian API | Menjalankan `curl.exe`, opsi `-i`, header, membaca status HTTP, cek `app.log` |

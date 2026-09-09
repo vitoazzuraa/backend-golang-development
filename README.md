@@ -72,9 +72,9 @@ yang tidak dapat dihubungi pada health check menghasilkan `503`.
 
 ## Kontrak API Student
 
-Data disimpan di memori. `page` memiliki nilai bawaan 1, `limit` memiliki nilai
+Data disimpan di PostgreSQL. `page` memiliki nilai bawaan 1, `limit` memiliki nilai
 bawaan 10 dan dibatasi maksimum 100. Field yang dapat digunakan untuk sorting
-adalah `id`, `nim`, `name`, dan `grade`.
+adalah `id`, `nim`, `name`, `grade`, dan `created_at`.
 
 | Metode | Endpoint | Parameter | Contoh body permintaan | Status yang mungkin dikembalikan | Contoh respons |
 |---|---|---|---|---|---|
