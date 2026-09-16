@@ -17,7 +17,7 @@ func NewApp(logger *slog.Logger, pool *pgxpool.Pool, studentService *service.Stu
 		ErrorHandler: newErrorHandler(logger),
 	})
 
-	middleware.Register(app, logger)
+	middleware.Register(app, logger, GetEnv("ALLOWED_ORIGINS", ""))
 
 	route.Register(app, pool, studentService)
 
@@ -31,6 +31,7 @@ func NewApp(logger *slog.Logger, pool *pgxpool.Pool, studentService *service.Stu
 func newErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
 		status := fiber.StatusInternalServerError
+		
 		message := "terjadi error pada server"
 
 		if e, ok := err.(*fiber.Error); ok {
