@@ -68,7 +68,7 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 	listArgs = append(listArgs, q.Limit, q.Offset())
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, nim, name, grade, is_active, created_at
+		SELECT id, nim, name, grade, is_active, owner_id, created_at
 		FROM students`+where+fmt.Sprintf(
 		" ORDER BY %s %s LIMIT $%d OFFSET $%d",
 		column, direction, len(args)+1, len(args)+2,
@@ -90,6 +90,7 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 			&student.Name,
 			&student.Grade,
 			&student.IsActive,
+			&student.OwnerID,
 			&student.CreatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("membaca baris student: %w", err)
@@ -126,7 +127,7 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 	var student model.Student
 
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, nim, name, grade, is_active, created_at
+		SELECT id, nim, name, grade, is_active, owner_id, created_at
 		FROM students
 		WHERE id = $1`,
 		id,
@@ -136,6 +137,7 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 		&student.Name,
 		&student.Grade,
 		&student.IsActive,
+		&student.OwnerID,
 		&student.CreatedAt,
 	)
 
@@ -152,13 +154,14 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 
 func (r *studentPostgresRepository) Create(ctx context.Context, student model.Student) (model.Student, error) {
 	err := r.pool.QueryRow(ctx, `
-		INSERT INTO students (nim, name, grade, is_active)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO students (nim, name, grade, is_active, owner_id)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, created_at`,
 		student.NIM,
 		student.Name,
 		student.Grade,
 		student.IsActive,
+		student.OwnerID,
 	).Scan(
 		&student.ID,
 		&student.CreatedAt,
@@ -180,7 +183,7 @@ func (r *studentPostgresRepository) Update(ctx context.Context, student model.St
 		UPDATE students
 		SET nim = $1, name = $2, grade = $3, is_active = $4
 		WHERE id = $5
-		RETURNING id, nim, name, grade, is_active, created_at`,
+		RETURNING id, nim, name, grade, is_active, owner_id, created_at`,
 		student.NIM,
 		student.Name,
 		student.Grade,
@@ -192,6 +195,7 @@ func (r *studentPostgresRepository) Update(ctx context.Context, student model.St
 		&student.Name,
 		&student.Grade,
 		&student.IsActive,
+		&student.OwnerID,
 		&student.CreatedAt,
 	)
 
