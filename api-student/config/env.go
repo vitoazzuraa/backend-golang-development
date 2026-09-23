@@ -24,13 +24,13 @@ func GetEnv(key, fallback string) string {
 
 func GetEnvInt(key string, fallback int) int {
 	value, ok := os.LookupEnv(key)
-	
+
 	if !ok || value == "" {
 		return fallback
 	}
 
 	parsed, err := strconv.Atoi(value)
-	
+
 	if err != nil {
 		log.Printf("peringatan: %s bukan angka (%q), memakai bawaan %d", key, value, fallback)
 		return fallback

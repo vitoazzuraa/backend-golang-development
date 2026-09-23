@@ -17,7 +17,7 @@ func RequestContext(c *fiber.Ctx) (context.Context, context.CancelFunc) {
 
 func ParamID(c *fiber.Ctx) (int, bool) {
 	id, err := strconv.Atoi(c.Params("id"))
-	
+
 	if err != nil || id < 1 {
 		return 0, false
 	}
