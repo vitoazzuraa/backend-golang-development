@@ -47,10 +47,21 @@ func Register(app *fiber.App, deps Dependencies) {
 	auth.Get("/me", middleware.RequireAuth(deps.JWT), deps.AuthService.Me)
 
 	studentRoutes := api.Group("/students", middleware.RequireJSON, middleware.RequireAuth(deps.JWT))
-	studentRoutes.Get("/", deps.StudentService.List)
+
+	perms := deps.Permissions
+
+	studentRoutes.Get("/",
+		middleware.RequirePermission(perms, "student:list"),
+		deps.StudentService.List)
+	studentRoutes.Post("/",
+		middleware.RequirePermission(perms, "student:create"),
+		deps.StudentService.Create)
+	studentRoutes.Delete("/:id",
+		middleware.RequirePermission(perms, "student:delete"),
+		deps.StudentService.Delete)
+
+	// Hak bergantung pada kepemilikan data -> diperiksa di service.
 	studentRoutes.Get("/:id", deps.StudentService.Get)
-	studentRoutes.Post("/", deps.StudentService.Create)
 	studentRoutes.Put("/:id", deps.StudentService.Replace)
 	studentRoutes.Patch("/:id", deps.StudentService.Patch)
-	studentRoutes.Delete("/:id", deps.StudentService.Delete)
 }
