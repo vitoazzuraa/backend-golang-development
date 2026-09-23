@@ -9,12 +9,12 @@ import (
 func TestValidateRegisterWeak(t *testing.T) {
 	req := model.RegisterRequest{
 		Username: "vito",
-		Email: "vito@example.com",
+		Email:    "vito@example.com",
 		Password: "password1",
 	}
-	
+
 	errs := ValidateRegister(req)
-	
+
 	if _, ok := errs["password"]; !ok {
 		t.Fatalf("want password error, got %v", errs)
 	}
@@ -22,11 +22,11 @@ func TestValidateRegisterWeak(t *testing.T) {
 
 func TestValidateRegisterValid(t *testing.T) {
 	req := model.RegisterRequest{
-		Username: "vito", 
-		Email: "vito@example.com", 
+		Username: "vito",
+		Email:    "vito@example.com",
 		Password: "admin123123",
 	}
-	
+
 	if errs := ValidateRegister(req); len(errs) != 0 {
 		t.Fatalf("want no error, got %v", errs)
 	}

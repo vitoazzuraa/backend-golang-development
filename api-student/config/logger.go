@@ -39,7 +39,7 @@ func NewLogger() *slog.Logger {
 	logger := slog.New(handler)
 
 	slog.SetDefault(logger)
-	
+
 	return logger
 }
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"backend-go/api-student/helper"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
@@ -50,7 +51,7 @@ func RequestLogger(logger *slog.Logger) fiber.Handler {
 			slog.Duration("duration", time.Since(start)),
 			slog.String("ip", c.IP()),
 		)
-		
+
 		return err
 	}
 }

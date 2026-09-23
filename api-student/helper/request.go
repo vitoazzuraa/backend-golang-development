@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"backend-go/api-student/app/model"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -16,6 +17,7 @@ func RequestContext(c *fiber.Ctx) (context.Context, context.CancelFunc) {
 
 func ParamID(c *fiber.Ctx) (int, bool) {
 	id, err := strconv.Atoi(c.Params("id"))
+	
 	if err != nil || id < 1 {
 		return 0, false
 	}
@@ -25,7 +27,7 @@ func ParamID(c *fiber.Ctx) (int, bool) {
 
 const maxPageLimit = 100
 
-// Harus sinkron dengan sortColumns di app/repository/student_repository.go.
+// Harus sinkron dengan sortColumns di app/repository/student_repository.go
 var allowedSort = map[string]bool{
 	"id":         true,
 	"nim":        true,

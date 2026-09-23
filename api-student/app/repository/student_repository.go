@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"backend-go/api-student/app/model"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,7 +29,7 @@ type studentPostgresRepository struct {
 	pool *pgxpool.Pool
 }
 
-// Harus sinkron dengan allowedSort di helper/request.go.
+// Harus sinkron dengan allowedSort di helper/request.go
 var sortColumns = map[string]string{
 	"id":         "id",
 	"nim":        "nim",
@@ -127,7 +128,9 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, nim, name, grade, is_active, created_at
 		FROM students
-		WHERE id = $1`, id).Scan(
+		WHERE id = $1`,
+		id,
+	).Scan(
 		&student.ID,
 		&student.NIM,
 		&student.Name,
@@ -156,7 +159,10 @@ func (r *studentPostgresRepository) Create(ctx context.Context, student model.St
 		student.Name,
 		student.Grade,
 		student.IsActive,
-	).Scan(&student.ID, &student.CreatedAt)
+	).Scan(
+		&student.ID,
+		&student.CreatedAt,
+	)
 
 	if err != nil {
 		if isUniqueViolation(err) {

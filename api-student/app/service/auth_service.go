@@ -10,6 +10,7 @@ import (
 	"backend-go/api-student/app/model"
 	"backend-go/api-student/app/repository"
 	"backend-go/api-student/helper"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -29,7 +30,10 @@ func NewAuthService(
 	refreshTTL time.Duration,
 ) *AuthService {
 	return &AuthService{
-		users: users, tokens: tokens, jwt: jwtManager, refreshTTL: refreshTTL,
+		users:      users,
+		tokens:     tokens,
+		jwt:        jwtManager,
+		refreshTTL: refreshTTL,
 	}
 }
 

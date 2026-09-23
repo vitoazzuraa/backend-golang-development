@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"backend-go/api-student/app/model"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -29,7 +30,11 @@ type JWTManager struct {
 }
 
 func NewJWTManager(secret, issuer string, accessTTL time.Duration) *JWTManager {
-	return &JWTManager{secret: []byte(secret), issuer: issuer, accessTTL: accessTTL}
+	return &JWTManager{
+		secret:    []byte(secret),
+		issuer:    issuer,
+		accessTTL: accessTTL,
+	}
 }
 
 func (m *JWTManager) AccessTTL() time.Duration {

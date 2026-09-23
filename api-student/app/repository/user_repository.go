@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"backend-go/api-student/app/model"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -30,7 +31,7 @@ func (r *userPostgresRepository) FindByUsername(ctx context.Context, username st
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, username, email, password, role, is_active, created_at
 		 FROM users WHERE LOWER(username) = LOWER($1)`,
-		 username,
+		username,
 	).Scan(
 		&u.ID,
 		&u.Username,
@@ -38,7 +39,7 @@ func (r *userPostgresRepository) FindByUsername(ctx context.Context, username st
 		&u.Password,
 		&u.Role,
 		&u.IsActive,
-		&u.CreatedAt
+		&u.CreatedAt,
 	)
 
 	if err != nil {
@@ -63,13 +64,14 @@ func (r *userPostgresRepository) Create(ctx context.Context, u model.User) (mode
 		u.IsActive,
 	).Scan(
 		&u.ID,
-		&u.CreatedAt
+		&u.CreatedAt,
 	)
 
 	if err != nil {
 		if isUniqueViolation(err) {
 			return model.User{}, ErrDuplicate
 		}
+
 		return model.User{}, fmt.Errorf("menyimpan user: %w", err)
 	}
 
@@ -82,7 +84,7 @@ func (r *userPostgresRepository) FindByID(ctx context.Context, id int) (model.Us
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, username, email, password, role, is_active, created_at
 		 FROM users WHERE id = $1`,
-		 id,
+		id,
 	).Scan(
 		&u.ID,
 		&u.Username,
@@ -90,7 +92,7 @@ func (r *userPostgresRepository) FindByID(ctx context.Context, id int) (model.Us
 		&u.Password,
 		&u.Role,
 		&u.IsActive,
-		&u.CreatedAt
+		&u.CreatedAt,
 	)
 
 	if err != nil {
@@ -100,6 +102,6 @@ func (r *userPostgresRepository) FindByID(ctx context.Context, id int) (model.Us
 
 		return model.User{}, fmt.Errorf("mengambil user: %w", err)
 	}
-	
+
 	return u, nil
 }
