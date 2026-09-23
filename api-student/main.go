@@ -67,6 +67,7 @@ func main() {
 		userRepository,
 		tokenRepository,
 		jwtManager,
+		permissions,
 		time.Duration(config.GetEnvInt("JWT_REFRESH_TTL_DAYS", 7))*24*time.Hour,
 	)
 
