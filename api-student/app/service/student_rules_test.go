@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"backend-go/api-student/app/model"
+	"backend-go/api-student/helper"
 )
 
 func TestCountTotalPages(t *testing.T) {
@@ -26,10 +27,22 @@ func TestValidateCreate(t *testing.T) {
 		Grade: 200,
 	}
 
-	errs := ValidateCreate(req)
+	errs := helper.ValidateStruct(req)
 
 	if len(errs) == 0 {
 		t.Error("want validation errors, got none")
+	}
+}
+
+func TestPatchStudentEmptyNameRejected(t *testing.T) {
+	empty := ""
+
+	errs := helper.ValidateStruct(model.PatchStudentRequest{
+		Name: &empty,
+	})
+
+	if _, ok := errs["name"]; !ok {
+		t.Fatalf("want name error, got %v", errs)
 	}
 }
 
@@ -44,13 +57,10 @@ func TestApplyPatch(t *testing.T) {
 
 	inactive := false
 
-	result, errs := ApplyPatch(initial, model.PatchStudentRequest{
+	result := ApplyPatch(initial, model.PatchStudentRequest{
 		IsActive: &inactive,
 	})
 
-	if len(errs) != 0 {
-		t.Fatalf("want no error, got %v", errs)
-	}
 	if result.IsActive {
 		t.Error("want IsActive false")
 	}

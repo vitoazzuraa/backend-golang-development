@@ -96,9 +96,7 @@ func (s *StudentService) Create(c *fiber.Ctx) error {
 
 	req.Name = strings.TrimSpace(req.Name)
 
-	errs := ValidateCreate(req)
-
-	if len(errs) > 0 {
+	if errs := helper.ValidateStruct(req); errs != nil {
 		return helper.Validation(errs)
 	}
 
@@ -143,9 +141,7 @@ func (s *StudentService) Replace(c *fiber.Ctx) error {
 
 	req.Name = strings.TrimSpace(req.Name)
 
-	errs := ValidateReplace(req)
-
-	if len(errs) > 0 {
+	if errs := helper.ValidateStruct(req); errs != nil {
 		return helper.Validation(errs)
 	}
 
@@ -196,6 +192,9 @@ func (s *StudentService) Patch(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return helper.BadRequest("body harus berupa JSON yang valid")
 	}
+	if errs := helper.ValidateStruct(req); errs != nil {
+		return helper.Validation(errs)
+	}
 	if IsEmptyPatch(req) {
 		return helper.BadRequest("tidak ada field yang diubah")
 	}
@@ -210,11 +209,7 @@ func (s *StudentService) Patch(c *fiber.Ctx) error {
 		return helper.Forbidden("Anda tidak berhak mengubah data student ini")
 	}
 
-	updated, errs := ApplyPatch(student, req)
-
-	if len(errs) > 0 {
-		return helper.Validation(errs)
-	}
+	updated := ApplyPatch(student, req)
 
 	result, err := s.repo.Update(ctx, updated)
 
