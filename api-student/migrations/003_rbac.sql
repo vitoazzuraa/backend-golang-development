@@ -21,8 +21,7 @@ INSERT INTO roles (name, description) VALUES
     ('user',  'Hanya boleh mengelola datanya sendiri')
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO git add 
-  api-student/migrations/003_rbac.sql (name, description) VALUES
+INSERT INTO permissions (name, description) VALUES
     ('user:list',       'Melihat daftar seluruh user'),
     ('user:read:any',   'Melihat data user mana pun'),
     ('user:update:any', 'Mengubah data user mana pun'),
