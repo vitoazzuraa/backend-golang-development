@@ -14,7 +14,7 @@ func Ok(c *fiber.Ctx, message string, data any) error {
 	})
 }
 
-func OkList(c *fiber.Ctx, message string, data any, meta *model.Meta) error {
+func SuccessCursor(c *fiber.Ctx, message string, data any, meta *model.CursorMeta) error {
 	return c.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Success: true,
 		Message: message,

@@ -7,20 +7,6 @@ import (
 	"backend-go/api-student/helper"
 )
 
-func TestCountTotalPages(t *testing.T) {
-	cases := []struct{ total, limit, want int }{
-		{0, 10, 0},
-		{10, 10, 1},
-		{11, 10, 2},
-	}
-
-	for _, tc := range cases {
-		if got := CountTotalPages(tc.total, tc.limit); got != tc.want {
-			t.Errorf("total=%d limit=%d: want %d, got %d", tc.total, tc.limit, tc.want, got)
-		}
-	}
-}
-
 func TestValidateCreate(t *testing.T) {
 	req := model.CreateStudentRequest{
 		NIM: 0, Name: "",

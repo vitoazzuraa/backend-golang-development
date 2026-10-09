@@ -18,7 +18,7 @@ var (
 )
 
 type StudentRepository interface {
-	FindAll(ctx context.Context, q model.ListQuery) ([]model.Student, int, error)
+	FindAfterCursor(ctx context.Context, q model.CursorQuery) ([]model.Student, error)
 	FindByID(ctx context.Context, id int) (model.Student, error)
 	Create(ctx context.Context, student model.Student) (model.Student, error)
 	Update(ctx context.Context, student model.Student) (model.Student, error)
@@ -29,53 +29,24 @@ type studentPostgresRepository struct {
 	pool *pgxpool.Pool
 }
 
-// Harus sinkron dengan allowedSort di helper/request.go
-var sortColumns = map[string]string{
-	"id":         "id",
-	"nim":        "nim",
-	"name":       "name",
-	"grade":      "grade",
-	"created_at": "created_at",
-}
-
 func NewStudentRepository(pool *pgxpool.Pool) StudentRepository {
 	return &studentPostgresRepository{pool: pool}
 }
 
-func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQuery) ([]model.Student, int, error) {
-	where, args := buildFilter(q)
+func (r *studentPostgresRepository) FindAfterCursor(ctx context.Context, q model.CursorQuery) ([]model.Student, error) {
+	where, args := buildCursorFilter(q)
 
-	var total int
-
-	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM students`+where, args...).Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("menghitung student: %w", err)
-	}
-
-	column, ok := sortColumns[q.Sort]
-
-	if !ok {
-		column = sortColumns["id"]
-	}
-
-	direction := "ASC"
-
-	if q.Order == "desc" {
-		direction = "DESC"
-	}
-
-	listArgs := append([]any{}, args...)
-
-	listArgs = append(listArgs, q.Limit, q.Offset())
+	args = append(args, q.Limit+1)
 
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, nim, name, grade, is_active, owner_id, created_at
 		FROM students`+where+fmt.Sprintf(
-		" ORDER BY %s %s LIMIT $%d OFFSET $%d",
-		column, direction, len(args)+1, len(args)+2,
-	), listArgs...)
+		" ORDER BY created_at DESC, id DESC LIMIT $%d",
+		len(args),
+	), args...)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("mengambil daftar student: %w", err)
+		return nil, fmt.Errorf("mengambil daftar student: %w", err)
 	}
 
 	defer rows.Close()
@@ -93,20 +64,20 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 			&student.OwnerID,
 			&student.CreatedAt,
 		); err != nil {
-			return nil, 0, fmt.Errorf("membaca baris student: %w", err)
+			return nil, fmt.Errorf("membaca baris student: %w", err)
 		}
 
 		result = append(result, student)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("membaca hasil query student: %w", err)
+		return nil, fmt.Errorf("membaca hasil query student: %w", err)
 	}
 
-	return result, total, nil
+	return result, nil
 }
 
-func buildFilter(q model.ListQuery) (string, []any) {
+func buildCursorFilter(q model.CursorQuery) (string, []any) {
 	where := " WHERE 1 = 1"
 
 	args := []any{}
@@ -118,6 +89,10 @@ func buildFilter(q model.ListQuery) (string, []any) {
 	if q.IsActive != nil {
 		where += fmt.Sprintf(" AND is_active = $%d", len(args)+1)
 		args = append(args, *q.IsActive)
+	}
+	if q.After != nil {
+		where += fmt.Sprintf(" AND (created_at, id) < ($%d, $%d)", len(args)+1, len(args)+2)
+		args = append(args, q.After.CreatedAt, q.After.ID)
 	}
 
 	return where, args
