@@ -91,7 +91,7 @@ func RequireJSON(c *fiber.Ctx) error {
 	mediaType, _, err := mime.ParseMediaType(c.Get(fiber.HeaderContentType))
 
 	if err != nil || mediaType != fiber.MIMEApplicationJSON {
-		return helper.Fail(c, fiber.StatusUnsupportedMediaType, "Content-Type harus application/json")
+		return helper.UnsupportedMediaType("Content-Type harus application/json")
 	}
 
 	return c.Next()
