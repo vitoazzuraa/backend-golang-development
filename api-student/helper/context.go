@@ -13,3 +13,9 @@ func CurrentUser(c *fiber.Ctx) (model.AuthUser, bool) {
 
 	return user, ok
 }
+
+func RequestID(c *fiber.Ctx) string {
+	id, _ := c.Locals("requestid").(string)
+
+	return id
+}
