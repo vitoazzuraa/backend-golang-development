@@ -33,7 +33,7 @@ func Register(app *fiber.App, deps Dependencies) {
 		defer cancel()
 
 		if err := deps.Pool.Ping(ctx); err != nil {
-			return helper.Fail(c, fiber.StatusServiceUnavailable, "database tidak dapat dihubungi")
+			return helper.ServiceUnavailable("database tidak dapat dihubungi")
 		}
 
 		return helper.Ok(c, "server dan database berjalan", nil)
