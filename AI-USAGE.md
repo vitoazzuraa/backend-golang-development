@@ -19,9 +19,12 @@ pola implementasi dari contoh modul, dan memeriksa hasil pekerjaan. Kode tetap
 ditulis sendiri: AI tidak menulis langsung ke file.
 
 Pada Week 6, AI dipakai untuk memeriksa kondisi repository sebelum masuk materi
-authorization: menemukan sisa masalah, memandu perbaikan langkah demi langkah,
-lalu memverifikasi hasilnya. AI hanya menulis file dokumentasi (README dan
-catatan ini) ketika diminta secara eksplisit.
+authorization, lalu mendampingi pengerjaan RBAC dan pemeriksaan kepemilikan:
+merancang skema, menjelaskan alasan setiap keputusan, dan memverifikasi hasil.
+Pada pemeriksaan akhir sebelum Modul 7, AI kembali memeriksa kode dan kondisi
+database, menemukan satu kesalahan pada file migration, dan memperbarui catatan
+ini. AI hanya menulis file dokumentasi (README dan catatan ini) ketika diminta
+secara eksplisit.
 
 ## Week 1 — Dasar Go, Pointer, dan Struct (13–18 Agustus 2026)
 
@@ -234,7 +237,7 @@ catatan ini) ketika diminta secara eksplisit.
   student memakai access token, dan memastikan permintaan tanpa token
   menghasilkan `401`.
 
-## Week 6 — Perapian Repository sebelum Authorization (23 September 2026)
+## Week 6 — Perapian Repository dan Authorization (23 September 2026)
 
 ### 17. Perbaikan syntax error yang sudah ter-commit
 
@@ -288,11 +291,128 @@ catatan ini) ketika diminta secara eksplisit.
 - Verifikasi akhir sebelum lanjut ke materi berikutnya: `gofmt -l` bersih,
   `go vet`, `go build`, dan `go test` lolos seluruhnya.
 
+### 21. Skema RBAC pada migration 003
+
+- Meminta rancangan skema sebelum menulis file: AI menjelaskan bentuk tabel
+  `roles`, `permissions`, dan `role_permissions`, termasuk alasan kunci utama
+  gabungan `(role_name, permission_name)` — database yang menjaga agar satu
+  role tidak menerima permission yang sama dua kali.
+- AI menjelaskan alasan foreign key pada `users.role`: tanpa constraint itu,
+  satu baris hasil `INSERT` manual yang salah ketik menghasilkan user yang
+  selamanya ditolak semua endpoint, dan penyebabnya sulit ditemukan.
+- AI menekankan baris `UPDATE users SET role = 'user' ...` harus berjalan
+  sebelum constraint dipasang: data lama dapat memuat role yang belum
+  terdaftar, dan penambahan foreign key akan gagal bila masih ada baris yang
+  melanggar.
+- File `003_rbac.sql` ditulis sendiri setelah rancangannya disepakati.
+
+### 22. `PermissionSet` — hak akses di memori
+
+- Meminta petunjuk isi `helper/authz.go`.
+- AI menjelaskan pola set `map[string]struct{}`: `struct{}` dipakai karena
+  ukurannya nol byte — yang dibutuhkan hanya keberadaan kunci, bukan nilainya.
+- AI menjelaskan prinsip fail closed: `Can` mengembalikan `false` untuk role
+  yang tidak dikenal, permission yang tidak dikenal, bahkan saat pemetaannya
+  nil. Menolak adalah kegagalan yang aman; mengizinkan bukan.
+
+### 23. Role repository — membaca pemetaan dari database
+
+- Meminta arahan untuk `LoadPermissions`.
+- AI menjelaskan mengapa `LEFT JOIN` dipakai, bukan `INNER JOIN`: role `user`
+  yang belum punya permission apa pun tetap harus muncul supaya sistem tahu
+  role itu dikenal. Dengan `INNER JOIN`, `IsKnownRole("user")` bernilai false
+  dan admin tidak akan pernah bisa menetapkan role tersebut.
+- AI menjelaskan `COALESCE` agar hasil `LEFT JOIN` yang `NULL` menjadi string
+  kosong sehingga `Scan` tidak perlu memakai tipe pointer.
+
+### 24. Memuat permission saat menyala dan middleware `RequirePermission`
+
+- Meminta arahan pemasangan pada `main.go` dan `middleware/authz.go`.
+- AI menjelaskan keputusan `os.Exit(1)` ketika pemuatan gagal: lebih baik gagal
+  keras saat aplikasi dinyalakan daripada berjalan dengan `PermissionSet`
+  kosong yang membuat seluruh endpoint membalas `403` tanpa penjelasan.
+- AI menjelaskan baris log daftar role saat startup sebagai pemeriksaan cepat:
+  bila isinya tidak sesuai harapan, sumbernya ada pada migration.
+- Koreksi konsep: urutan pemasangan tidak boleh dibalik — `RequireAuth` selalu
+  mendahului `RequirePermission`, karena "boleh atau tidak" baru bermakna
+  setelah "siapa" diketahui. `401` untuk identitas yang belum diketahui, `403`
+  untuk identitas sah yang haknya kurang.
+
+### 25. Migration 004 — permission student dan kolom `owner_id`
+
+- Meminta pemetaan permission ke role: `student:list`, `student:read:any`, dan
+  `student:create` untuk admin dan staff; `student:update:any` dan
+  `student:delete` hanya untuk admin.
+- AI menjelaskan alasan kolom `owner_id` dibuat nullable: baris lama belum
+  punya pemilik, dan baris tanpa pemilik tetap aman karena fail closed — hanya
+  pemegang permission `:any` yang dapat menyentuhnya.
+- AI menekankan `owner_id` wajib diisi dari identitas pemanggil dan struct
+  request tidak boleh memiliki field itu, supaya pengirim body tidak dapat
+  mengaku-aku sebagai pemilik lain (mass assignment).
+
+### 26. Penjagaan endpoint student: route dan service
+
+- Meminta arahan pemasangan `RequirePermission` pada route students.
+- AI menjelaskan pembagian tempat pemeriksaan: keputusan yang dapat diambil
+  tanpa melihat data dipasang di route, sedangkan keputusan yang bergantung
+  isi data ditempatkan di service — middleware tidak boleh mulai mengenal
+  struktur database.
+- Dibuat file `student_authz_rules.go` berisi fungsi murni `CanAccessStudent`
+  yang tidak mengimpor Fiber maupun repository: pemilik data selalu boleh,
+  selain itu diperlukan permission `:any` yang sesuai.
+- AI menjelaskan mengapa urutan pada entity student berbeda dari contoh users
+  di modul: kepemilikan baru dapat diketahui setelah baris data diambil,
+  sehingga pemeriksaan dijalankan tepat setelah data ditemukan dan sebelum
+  data diubah.
+
+### 27. Jejak audit dan daftar permission pada profil
+
+- Meminta arahan penambahan identitas pada access log agar penolakan dapat
+  ditelusuri.
+- AI menjelaskan mengapa `user_id` dan `role` ikut dicatat: tanpa itu, sebuah
+  `403` pada log hanya memberi tahu bahwa ada request yang ditolak, tanpa tahu
+  siapa dan mengapa.
+- AI menjelaskan `GET /auth/me` menyertakan daftar permission role pemakai
+  sebagai kemudahan tampilan frontend, bukan pengamanan — penjagaan yang
+  sesungguhnya tetap berada di middleware dan service.
+
+### 28. Pengujian matriks hak akses
+
+- Mendaftarkan tiga akun (`admin`, `staff`, dan `user`) lalu menaikkan role
+  lewat `psql`.
+- Menelusuri matriks hak akses endpoint student untuk tiap role, dengan
+  pengujian negatif seperti memakai token role `user` atas data milik orang
+  lain dan mencoba mengirim `owner_id` di dalam body `POST`.
+- Hasil pengujian dicatat sebagai bahan bukti laporan Tugas 6.
+
+## Pemeriksaan Akhir Modul 6 (9 Oktober 2026)
+
+### 29. Verifikasi kelengkapan Modul 6 dan temuan pada migration
+
+- Meminta AI memeriksa apakah seluruh pekerjaan Modul 6 — permission,
+  kepemilikan, route, dan log — sudah benar dan siap dilanjutkan ke Modul 7.
+- AI memeriksa kode, menjalankan `gofmt`, `go vet`, `go build`, dan `go test`,
+  serta memeriksa kondisi database secara read-only (`SELECT`): seluruh
+  permission, pemetaan role, kolom `owner_id`, dan kepemilikan data sudah
+  sesuai.
+- Temuan: satu kalimat `INSERT` pada `003_rbac.sql` tertimpa perintah `git add`
+  sehingga file tidak dapat dijalankan dari awal. Database tidak terpengaruh;
+  perbaikannya cukup satu baris — mengembalikan kalimat
+  `INSERT INTO permissions (name, description) VALUES`.
+
+### 30. Sinkronisasi dokumentasi
+
+- README diperbarui agar mencerminkan pekerjaan authorization: struktur
+  folder, daftar migration, bagian Authorization, dan status `403` pada
+  kontrak API student.
+- Bagian Week 6 dan pemeriksaan akhir pada catatan ini disusun dari riwayat
+  commit karena pencatatan tertinggal saat pengerjaan berlangsung.
+
 ## Ringkasan Peran AI
 
 | Tipe Bantuan | Contoh |
 |---|---|
-| Petunjuk / kisi-kisi | Cara mengisi `updateSlice`, outline method struct, urutan langkah Modul 4, urutan perapian repository |
-| Review & koreksi kode | Bug `swap`, return type `GetInfo`, `pilihan` tidak discan, import service dan route, koma hilang pada `Scan(...)` |
-| Koreksi konsep | Receiver pointer, pass by value vs pointer, batas layer dan whitelist, perpindahan data memori ke database, rotasi refresh token, aturan koma di Go |
-| Pengujian | `curl.exe` dan pembacaan status HTTP, pemeriksaan `app.log`, `gofmt`, `go vet`, `go build`, `go test` |
+| Petunjuk / kisi-kisi | Cara mengisi `updateSlice`, outline method struct, urutan langkah Modul 4, urutan perapian repository, rancangan skema RBAC dan pemetaan permission ke role |
+| Review & koreksi kode | Bug `swap`, return type `GetInfo`, `pilihan` tidak discan, import service dan route, koma hilang pada `Scan(...)`, kalimat `INSERT` yang tertimpa perintah `git` pada `003_rbac.sql` |
+| Koreksi konsep | Receiver pointer, pass by value vs pointer, batas layer dan whitelist, perpindahan data memori ke database, rotasi refresh token, aturan koma di Go, fail closed, `LEFT JOIN` untuk role tanpa permission, pembagian pemeriksaan middleware dan service, `401` vs `403`, mass assignment |
+| Pengujian | `curl.exe` dan pembacaan status HTTP, pemeriksaan `app.log`, `gofmt`, `go vet`, `go build`, `go test`, pemeriksaan kondisi database (permission, pemetaan role, `owner_id`) secara read-only |

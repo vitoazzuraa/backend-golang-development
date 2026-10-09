@@ -1,7 +1,7 @@
 # Pemrograman Backend Lanjut dengan Go
 
 Repository ini berisi latihan Week 1 dan API Student berbasis PostgreSQL,
-lengkap dengan authentication berbasis token.
+lengkap dengan authentication dan authorization berbasis token.
 
 ## Struktur Project
 
@@ -16,13 +16,13 @@ api-student/
   main.go
   app/
     model/        student.go, user.go, auth.go
-    repository/   student_repository.go, user_repository.go, token_repository.go
-    service/      student_service.go, student_rules.go, auth_service.go, auth_rules.go
+    repository/   student_repository.go, user_repository.go, token_repository.go, role_repository.go
+    service/      student_service.go, student_rules.go, student_authz_rules.go, auth_service.go, auth_rules.go
   config/         app.go, env.go, logger.go
   database/       postgres.go
-  helper/         context.go, jwt.go, request.go, response.go, security.go
-  middleware/     middleware.go, auth.go
-  migrations/     001_create_students.sql, 002_auth.sql
+  helper/         context.go, jwt.go, request.go, response.go, security.go, authz.go
+  middleware/     middleware.go, auth.go, authz.go
+  migrations/     001_create_students.sql, 002_auth.sql, 003_rbac.sql, 004_student_permissions.sql
   route/          route.go
 ```
 
@@ -46,18 +46,24 @@ database: `200` bila keduanya sehat, `503` bila database tidak dapat dihubungi.
 
 ## Menyiapkan Database
 
-Buat database dan jalankan kedua migration dari root repository:
+Buat database dan jalankan keempat migration dari root repository:
 
 ```powershell
 psql -h localhost -U postgres -c "CREATE DATABASE go_backend;"
 psql -h localhost -U postgres -d go_backend -f .\api-student\migrations\001_create_students.sql
 psql -h localhost -U postgres -d go_backend -f .\api-student\migrations\002_auth.sql
+psql -h localhost -U postgres -d go_backend -f .\api-student\migrations\003_rbac.sql
+psql -h localhost -U postgres -d go_backend -f .\api-student\migrations\004_student_permissions.sql
 ```
 
 Migration pertama membuat tabel `students`, constraint unik pada `nim`, dan index
 untuk pencarian nama. Migration kedua membuat tabel `users` dengan index unik
 case-insensitive pada `username` dan `email`, serta tabel `refresh_tokens` untuk
-menyimpan refresh token dalam bentuk hash.
+menyimpan refresh token dalam bentuk hash. Migration ketiga membuat tabel
+`roles`, `permissions`, dan `role_permissions`, lalu mengunci kolom `role` pada
+tabel `users` dengan foreign key. Migration keempat menambahkan permission untuk
+entity student dan kolom `owner_id` pada tabel `students` sebagai dasar
+pemeriksaan kepemilikan.
 
 ## Environment Variable
 
@@ -94,6 +100,32 @@ Seluruh endpoint `students` dan `GET /api/v1/auth/me` membutuhkan header
 `Authorization: Bearer <access_token>`. Password disimpan sebagai hash bcrypt
 dan tidak pernah ikut di dalam response.
 
+## Authorization
+
+Hak akses disimpan di database, bukan ditulis keras di kode: tabel `roles`,
+`permissions`, dan `role_permissions` memetakannya, dan pemetaan itu dibaca
+sekali saat aplikasi menyala.
+
+| Role | Permission | Ringkasan |
+|---|---|---|
+| `admin` | seluruh permission | mengelola semua data |
+| `staff` | `student:list`, `student:read:any`, `student:create` | melihat dan menambah, tidak mengubah |
+| `user` | tidak ada | hanya data miliknya sendiri |
+
+Penjagaannya dua lapis. Keputusan yang tidak bergantung isi data diperiksa
+middleware lewat `RequirePermission` — terpasang pada `GET /students`,
+`POST /students`, dan `DELETE /students/:id`. Keputusan yang bergantung isi data
+diperiksa di service: pemilik data (kolom `owner_id` sama dengan id pemanggil)
+selalu boleh membaca dan mengubah datanya, sedangkan role lain memerlukan
+permission `:any` yang sesuai. Kolom `owner_id` diisi otomatis dari identitas
+pemanggil dan tidak dapat diubah lewat body request.
+
+Identitas yang belum diketahui menghasilkan `401`; identitas yang sah tetapi
+haknya kurang menghasilkan `403`. Permission yang tidak dikenal ditolak (fail
+closed). `GET /api/v1/auth/me` menyertakan daftar permission milik role pemakai
+— berguna untuk tampilan, bukan pengamanan. Role dibawa di dalam access token,
+sehingga perubahan role baru berlaku setelah token diganti (login atau refresh).
+
 ## Kontrak API Auth
 
 | Metode | Endpoint | Contoh body permintaan | Status yang mungkin dikembalikan |
@@ -129,14 +161,17 @@ Data disimpan di PostgreSQL dan seluruh endpoint membutuhkan header
 memiliki nilai bawaan 10 dan dibatasi maksimum 100. Field yang dapat digunakan
 untuk sorting adalah `id`, `nim`, `name`, `grade`, dan `created_at`.
 
+Hak akses diperiksa per endpoint dan per baris data; aturannya dijelaskan pada
+bagian Authorization.
+
 | Metode | Endpoint | Parameter | Contoh body permintaan | Status yang mungkin dikembalikan | Contoh respons |
 |---|---|---|---|---|---|
-| GET | `/api/v1/students` | Query: `page`, `limit`, `search`, `sort`, `order`, `is_active` | Tidak ada | `200`, `401` | `{"success":true,"message":"daftar student berhasil diambil","data":[...],"meta":{"page":1,"limit":10,"total":1,"total_pages":1}}` |
-| GET | `/api/v1/students/:id` | Path: `id` | Tidak ada | `200`, `400`, `401`, `404` | `{"success":true,"message":"student ditemukan","data":{"id":1,"nim":24001,"name":"Sari","grade":90,"is_active":true,"created_at":"2026-09-23T10:00:00+07:00"}}` |
-| POST | `/api/v1/students` | Tidak ada | `{"nim":24001,"name":"Sari","grade":90}` | `201`, `400`, `401`, `409`, `415`, `422` | `{"success":true,"message":"student berhasil dibuat","data":{...}}` |
-| PUT | `/api/v1/students/:id` | Path: `id`; body wajib: `nim`, `name`, `grade`, `is_active` | `{"nim":24001,"name":"Sari Baru","grade":95,"is_active":false}` | `200`, `400`, `401`, `404`, `409`, `415`, `422` | `{"success":true,"message":"student berhasil diganti seluruhnya","data":{...}}` |
-| PATCH | `/api/v1/students/:id` | Path: `id`; body hanya field yang diubah | `{"is_active":true}` | `200`, `400`, `401`, `404`, `409`, `415`, `422` | `{"success":true,"message":"student berhasil diperbarui sebagian","data":{...}}` |
-| DELETE | `/api/v1/students/:id` | Path: `id` | Tidak ada | `204`, `400`, `401`, `404` | Tidak ada body |
+| GET | `/api/v1/students` | Query: `page`, `limit`, `search`, `sort`, `order`, `is_active` | Tidak ada | `200`, `401`, `403` | `{"success":true,"message":"daftar student berhasil diambil","data":[...],"meta":{"page":1,"limit":10,"total":1,"total_pages":1}}` |
+| GET | `/api/v1/students/:id` | Path: `id` | Tidak ada | `200`, `400`, `401`, `403`, `404` | `{"success":true,"message":"student ditemukan","data":{"id":1,"nim":24001,"name":"Sari","grade":90,"is_active":true,"owner_id":1,"created_at":"2026-09-23T10:00:00+07:00"}}` |
+| POST | `/api/v1/students` | Tidak ada | `{"nim":24001,"name":"Sari","grade":90}` | `201`, `400`, `401`, `403`, `409`, `415`, `422` | `{"success":true,"message":"student berhasil dibuat","data":{...}}` |
+| PUT | `/api/v1/students/:id` | Path: `id`; body wajib: `nim`, `name`, `grade`, `is_active` | `{"nim":24001,"name":"Sari Baru","grade":95,"is_active":false}` | `200`, `400`, `401`, `403`, `404`, `409`, `415`, `422` | `{"success":true,"message":"student berhasil diganti seluruhnya","data":{...}}` |
+| PATCH | `/api/v1/students/:id` | Path: `id`; body hanya field yang diubah | `{"is_active":true}` | `200`, `400`, `401`, `403`, `404`, `409`, `415`, `422` | `{"success":true,"message":"student berhasil diperbarui sebagian","data":{...}}` |
+| DELETE | `/api/v1/students/:id` | Path: `id` | Tidak ada | `204`, `400`, `401`, `403`, `404` | Tidak ada body |
 
 Request dengan body wajib menggunakan `Content-Type: application/json`. Response
 POST berhasil menyertakan header `Location`, dan setiap response menyertakan
