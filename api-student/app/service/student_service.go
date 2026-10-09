@@ -29,6 +29,12 @@ func (s *StudentService) List(c *fiber.Ctx) error {
 
 	defer cancel()
 
+	format, err := helper.Negotiate(c, helper.FormatJSON, helper.FormatCSV)
+
+	if err != nil {
+		return err
+	}
+
 	q, err := helper.ParseCursorQuery(c)
 
 	if err != nil {
@@ -45,6 +51,10 @@ func (s *StudentService) List(c *fiber.Ctx) error {
 
 	if hasMore {
 		rows = rows[:q.Limit]
+	}
+
+	if format == helper.FormatCSV {
+		return helper.WriteStudentsCSV(c, rows)
 	}
 
 	meta := &model.CursorMeta{Limit: q.Limit, HasMore: hasMore}
