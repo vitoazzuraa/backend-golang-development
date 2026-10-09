@@ -41,6 +41,11 @@ func newValidator() *validator.Validate {
 	_ = v.RegisterValidation("strongpassword", func(fl validator.FieldLevel) bool {
 		return checkPasswordStrength(fl.Field().String()) == ""
 	})
+	_ = v.RegisterValidation("nim", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Int()
+
+		return value >= 10000 && value <= 99999
+	})
 
 	return v
 }
@@ -95,6 +100,8 @@ func messageFor(fe validator.FieldError) string {
 		return "tidak boleh mengandung spasi"
 	case "username":
 		return "hanya boleh huruf, angka, titik, dan garis bawah"
+	case "nim":
+		return "harus terdiri dari 5 angka"
 	case "strongpassword":
 		if value, ok := fe.Value().(string); ok {
 			return checkPasswordStrength(value)

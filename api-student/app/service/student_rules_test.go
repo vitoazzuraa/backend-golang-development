@@ -20,6 +20,16 @@ func TestValidateCreate(t *testing.T) {
 	}
 }
 
+func TestValidateCreateValid(t *testing.T) {
+	req := model.CreateStudentRequest{
+		NIM: 24001, Name: "Vito", Grade: 90,
+	}
+
+	if errs := helper.ValidateStruct(req); errs != nil {
+		t.Fatalf("want no error, got %v", errs)
+	}
+}
+
 func TestPatchStudentEmptyNameRejected(t *testing.T) {
 	empty := ""
 

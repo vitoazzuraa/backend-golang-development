@@ -13,20 +13,20 @@ type Student struct {
 }
 
 type CreateStudentRequest struct {
-	NIM   int     `json:"nim"   validate:"min=1"`
+	NIM   int     `json:"nim"   validate:"nim"`
 	Name  string  `json:"name"  validate:"required"`
 	Grade float64 `json:"grade" validate:"min=0,max=100"`
 }
 
 type ReplaceStudentRequest struct {
-	NIM      int     `json:"nim"       validate:"min=1"`
+	NIM      int     `json:"nim"       validate:"nim"`
 	Name     string  `json:"name"      validate:"required"`
 	Grade    float64 `json:"grade"     validate:"min=0,max=100"`
 	IsActive *bool   `json:"is_active" validate:"required"`
 }
 
 type PatchStudentRequest struct {
-	NIM      *int     `json:"nim,omitempty"   validate:"omitnil,min=1"`
+	NIM      *int     `json:"nim,omitempty"   validate:"omitnil,nim"`
 	Name     *string  `json:"name,omitempty"  validate:"omitnil,min=1"`
 	Grade    *float64 `json:"grade,omitempty" validate:"omitnil,min=0,max=100"`
 	IsActive *bool    `json:"is_active,omitempty"`
