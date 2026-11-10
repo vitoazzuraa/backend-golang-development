@@ -248,7 +248,7 @@ func (r *coursePostgresRepository) LockCourses(ctx context.Context, ids ...int) 
 
 func (r *coursePostgresRepository) UpdateQuota(ctx context.Context, id, quota, version int) (model.Course, error) {
 	c, err := scanCourse(r.db.QueryRow(ctx,
-		`UPDATE courses SET quota = $1
+		`UPDATE courses SET quota = $1, version = version + 1
 		 WHERE id = $2 AND version = $3 AND $1 >= enrolled_count
 		 RETURNING `+courseColumns, quota, id, version))
 

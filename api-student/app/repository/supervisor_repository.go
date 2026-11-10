@@ -209,7 +209,7 @@ func (r *supervisorPostgresRepository) RemoveSupervision(ctx context.Context, su
 
 func (r *supervisorPostgresRepository) UpdateQuota(ctx context.Context, id, quota, version int) (model.Supervisor, error) {
 	s, err := scanSupervisor(r.db.QueryRow(ctx,
-		`UPDATE supervisors SET quota = $1
+		`UPDATE supervisors SET quota = $1, version = version + 1
 		 WHERE id = $2 AND version = $3 AND $1 >= supervised_count
 		 RETURNING `+supervisorColumns, quota, id, version))
 
