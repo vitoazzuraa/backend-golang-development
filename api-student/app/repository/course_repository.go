@@ -10,12 +10,21 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+var (
+	ErrCourseFull       = errors.New("kuota kelas sudah penuh")
+	ErrNotEnrolled      = errors.New("tidak terdaftar di kelas ini")
+	ErrVersionConflict  = errors.New("data sudah diubah pihak lain")
+	ErrQuotaBelowFilled = errors.New("kuota lebih kecil dari jumlah peserta")
+)
+
 type CourseRepository interface {
 	WithTx(tx DBTX) CourseRepository
 
 	FindAll(ctx context.Context) ([]model.Course, error)
 	FindByID(ctx context.Context, id int) (model.Course, error)
 	FindByStudent(ctx context.Context, userID int) ([]model.Course, error)
+	InsertEnrollment(ctx context.Context, courseID, userID int) error
+	SetEnrolledCount(ctx context.Context, courseID, count int) error
 }
 
 const courseColumns = `id, code, name, credits, quota, enrolled_count, version, created_at`
@@ -36,7 +45,7 @@ func scanCourse(row pgx.Row) (model.Course, error) {
 	var c model.Course
 
 	err := row.Scan(
-		c.ID,
+		&c.ID,
 		&c.Code,
 		&c.Name,
 		&c.Credits,
@@ -101,4 +110,30 @@ func (r *coursePostgresRepository) FindByStudent(ctx context.Context, userID int
 		 WHERE e.user_id = $1
 		 ORDER BY c.code`, userID),
 	)
+}
+
+func (r *coursePostgresRepository) InsertEnrollment(ctx context.Context, courseID, userID int) error {
+	_, err := r.db.Exec(ctx,
+		"INSERT INTO enrollments (course_id, user_id) VALUES ($1, $2)", courseID, userID)
+
+	if err != nil {
+		if pgErrorCode(err) == codeUniqueViolation {
+			return ErrDuplicate
+		}
+
+		return fmt.Errorf("mencatat pendaftaran: %w", err)
+	}
+
+	return nil
+}
+
+func (r *coursePostgresRepository) SetEnrolledCount(ctx context.Context, courseID, count int) error {
+	_, err := r.db.Exec(ctx,
+		"UPDATE courses SET enrolled_count = $1 WHERE id = $2", count, courseID)
+
+	if err != nil {
+		return fmt.Errorf("menyimpan jumlah peserta: %w", err)
+	}
+
+	return nil
 }
