@@ -43,6 +43,7 @@ func main() {
 	userRepository := repository.NewUserRepository(pool)
 	tokenRepository := repository.NewTokenRepository(pool)
 	roleRepository := repository.NewRoleRepository(pool)
+	courseRepository := repository.NewCourseRepository(pool)
 
 	rawPermissions, err := roleRepository.LoadPermissions(context.Background())
 
@@ -56,6 +57,8 @@ func main() {
 	logger.Info("permission dimuat", slog.Any("roles", permissions.KnownRoles()))
 
 	studentService := service.NewStudentService(studentRepository, permissions)
+
+	courseService := service.NewCourseService(courseRepository)
 
 	jwtManager := helper.NewJWTManager(
 		jwtSecret,
@@ -77,6 +80,7 @@ func main() {
 		Permissions:    permissions,
 		StudentService: studentService,
 		AuthService:    authService,
+		CourseService:  courseService,
 	})
 
 	logger.Info("server berjalan")
