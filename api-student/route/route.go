@@ -13,12 +13,13 @@ import (
 )
 
 type Dependencies struct {
-	Pool           *pgxpool.Pool
-	JWT            *helper.JWTManager
-	Permissions    *helper.PermissionSet
-	StudentService *service.StudentService
-	AuthService    *service.AuthService
-	CourseService  *service.CourseService
+	Pool               *pgxpool.Pool
+	JWT                *helper.JWTManager
+	Permissions        *helper.PermissionSet
+	StudentService     *service.StudentService
+	AuthService        *service.AuthService
+	CourseService      *service.CourseService
+	SupervisionService *service.SupervisionService
 }
 
 func Register(app *fiber.App, deps Dependencies) {
@@ -83,4 +84,24 @@ func Register(app *fiber.App, deps Dependencies) {
 		middleware.RequireAuth(deps.JWT))
 
 	enrollments.Post("/swap", deps.CourseService.Swap)
+
+	supervisors := api.Group("/supervisors",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT))
+
+	supervisors.Get("/", deps.SupervisionService.List)
+	supervisors.Post("/:id/assign",
+		middleware.RequirePermission(perms, "supervision:manage"),
+		deps.SupervisionService.Assign)
+	supervisors.Patch("/:id",
+		middleware.RequirePermission(perms, "supervision:manage"),
+		deps.SupervisionService.UpdateQuota)
+
+	supervisions := api.Group("/supervisions",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT))
+
+	supervisions.Post("/switch",
+		middleware.RequirePermission(perms, "supervision:manage"),
+		deps.SupervisionService.Switch)
 }

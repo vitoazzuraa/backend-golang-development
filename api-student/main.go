@@ -45,6 +45,8 @@ func main() {
 	roleRepository := repository.NewRoleRepository(pool)
 	courseRepository := repository.NewCourseRepository(pool)
 
+	supervisorRepository := repository.NewSupervisorRepository(pool)
+
 	rawPermissions, err := roleRepository.LoadPermissions(context.Background())
 
 	if err != nil {
@@ -62,6 +64,8 @@ func main() {
 
 	courseService := service.NewCourseService(courseRepository, txManager)
 
+	supervisionService := service.NewSupervisionService(supervisorRepository, txManager)
+
 	jwtManager := helper.NewJWTManager(
 		jwtSecret,
 		config.GetEnv("JWT_ISSUER", "praktikum-backend"),
@@ -77,12 +81,13 @@ func main() {
 	)
 
 	app := config.NewApp(logger, route.Dependencies{
-		Pool:           pool,
-		JWT:            jwtManager,
-		Permissions:    permissions,
-		StudentService: studentService,
-		AuthService:    authService,
-		CourseService:  courseService,
+		Pool:               pool,
+		JWT:                jwtManager,
+		Permissions:        permissions,
+		StudentService:     studentService,
+		AuthService:        authService,
+		CourseService:      courseService,
+		SupervisionService: supervisionService,
 	})
 
 	logger.Info("server berjalan")
