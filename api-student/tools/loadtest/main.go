@@ -155,10 +155,10 @@ func testSwap() {
 	fmt.Println("20 pasang mahasiswa pindah kelas berlawanan arah...")
 	start := time.Now()
 
-	ids := getAccounts(20)
+	ids := getAccounts(40)
 
 	tally := fire(40, func(i int) string {
-		studentIdx := i / 2
+		studentIdx := i
 		from, to := 1, 2
 		if i%2 == 1 {
 			from, to = 2, 1
