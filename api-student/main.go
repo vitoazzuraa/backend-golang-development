@@ -58,7 +58,9 @@ func main() {
 
 	studentService := service.NewStudentService(studentRepository, permissions)
 
-	courseService := service.NewCourseService(courseRepository)
+	txManager := repository.NewTxManager(pool)
+
+	courseService := service.NewCourseService(courseRepository, txManager)
 
 	jwtManager := helper.NewJWTManager(
 		jwtSecret,
