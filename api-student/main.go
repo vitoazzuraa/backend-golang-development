@@ -39,6 +39,21 @@ func main() {
 
 	defer pool.Close()
 
+	mongoClient, err := database.NewMongoClient(context.Background())
+
+	if err != nil {
+		logger.Error("gagal terhubung ke MongoDB", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
+		defer cancel()
+
+		_ = mongoClient.Disconnect(ctx)
+	}()
+
 	studentRepository := repository.NewStudentRepository(pool)
 	userRepository := repository.NewUserRepository(pool)
 	tokenRepository := repository.NewTokenRepository(pool)
@@ -82,6 +97,7 @@ func main() {
 
 	app := config.NewApp(logger, route.Dependencies{
 		Pool:               pool,
+		Mongo:              mongoClient,
 		JWT:                jwtManager,
 		Permissions:        permissions,
 		StudentService:     studentService,
