@@ -84,7 +84,11 @@ func (w *NotificationWorker) HandleSend(ctx context.Context, t *asynq.Task) erro
 			return nil
 		}
 
-		return w.mailer.Send(ctx, msg)
+		if err := w.mailer.Send(ctx, msg); err != nil {
+			return err
+		}
+
+		return w.notifications.WithTx(tx).MarkSent(ctx, job.OutboxID, user.ID)
 	})
 
 	if err != nil {

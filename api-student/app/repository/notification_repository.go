@@ -14,6 +14,7 @@ type NotificationRepository interface {
 	WithTx(tx DBTX) NotificationRepository
 
 	Claim(ctx context.Context, outboxID int64, userID int, subject, body string) (bool, error)
+	MarkSent(ctx context.Context, outboxID int64, userID int) error
 	FindByUser(ctx context.Context, userID int) ([]model.Notification, error)
 	Count(ctx context.Context, outboxID int64) (int, error)
 	FindTargets(ctx context.Context, outboxID int64) ([]int, error)
@@ -49,6 +50,17 @@ func (r *notificationPostgresRepository) Claim(ctx context.Context, outboxID int
 	}
 
 	return true, nil
+}
+
+func (r *notificationPostgresRepository) MarkSent(ctx context.Context, outboxID int64, userID int) error {
+	_, err := r.db.Exec(ctx,
+		"UPDATE notifications SET sent_at = NOW() WHERE outbox_id = $1 AND user_id = $2", outboxID, userID)
+
+	if err != nil {
+		return fmt.Errorf("menandai notifikasi terkirim: %w", err)
+	}
+
+	return nil
 }
 
 func (r *notificationPostgresRepository) FindByUser(ctx context.Context, userID int) ([]model.Notification, error) {
