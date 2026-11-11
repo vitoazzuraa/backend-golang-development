@@ -24,6 +24,7 @@ type Dependencies struct {
 	SupervisionService *service.SupervisionService
 	PortfolioService   *service.PortfolioService
 	ReviewService      *service.ReviewService
+	AdminService       *service.AdminService
 }
 
 func Register(app *fiber.App, deps Dependencies) {
@@ -81,6 +82,13 @@ func Register(app *fiber.App, deps Dependencies) {
 	reviews.Delete("/:id", deps.ReviewService.Delete)
 	reviews.Post("/:id/replies", deps.ReviewService.AddReply)
 	reviews.Post("/:id/helpful", deps.ReviewService.MarkHelpful)
+
+	admin := api.Group("/admin",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT),
+		middleware.RequirePermission(perms, "course:manage"))
+
+	admin.Get("/queue", deps.AdminService.Queue)
 
 	courses := api.Group("/courses",
 		middleware.RequireJSON,

@@ -15,6 +15,7 @@ type OutboxRepository interface {
 	MarkPublished(ctx context.Context, ids []int64) error
 	CreateNotification(ctx context.Context, db DBTX, n model.Notification) error
 	MarkSent(ctx context.Context, outboxID int64) error
+	QueueStatus(ctx context.Context) (map[string]int, error)
 }
 
 type outboxPostgresRepository struct {
@@ -97,4 +98,30 @@ func (r *outboxPostgresRepository) MarkSent(ctx context.Context, outboxID int64)
 	}
 
 	return nil
+}
+
+func (r *outboxPostgresRepository) QueueStatus(ctx context.Context) (map[string]int, error) {
+	hasil := map[string]int{}
+
+	pernyataan := []struct {
+		kunci string
+		sql   string
+	}{
+		{"outbox_belum_publish", "SELECT count(*) FROM outbox WHERE published_at IS NULL"},
+		{"outbox_total", "SELECT count(*) FROM outbox"},
+		{"notifikasi_belum_kirim", "SELECT count(*) FROM notifications WHERE sent_at IS NULL"},
+		{"notifikasi_total", "SELECT count(*) FROM notifications"},
+	}
+
+	for _, item := range pernyataan {
+		var jumlah int
+
+		if err := r.pool.QueryRow(ctx, item.sql).Scan(&jumlah); err != nil {
+			return nil, fmt.Errorf("menghitung antrean: %w", err)
+		}
+
+		hasil[item.kunci] = jumlah
+	}
+
+	return hasil, nil
 }

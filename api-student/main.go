@@ -118,6 +118,8 @@ func main() {
 
 	worker := job.NewWorker(outboxRepository, mailer)
 
+	adminService := service.NewAdminService(outboxRepository)
+
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(job.TaskTypeKirimNotifikasi, worker.Handler)
 
@@ -152,6 +154,7 @@ func main() {
 		SupervisionService: supervisionService,
 		PortfolioService:   portfolioService,
 		ReviewService:      reviewService,
+		AdminService:       adminService,
 	})
 
 	logger.Info("server berjalan")
