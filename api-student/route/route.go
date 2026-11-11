@@ -14,17 +14,18 @@ import (
 )
 
 type Dependencies struct {
-	Pool               *pgxpool.Pool
-	Mongo              *mongo.Client
-	JWT                *helper.JWTManager
-	Permissions        *helper.PermissionSet
-	StudentService     *service.StudentService
-	AuthService        *service.AuthService
-	CourseService      *service.CourseService
-	SupervisionService *service.SupervisionService
-	PortfolioService   *service.PortfolioService
-	ReviewService      *service.ReviewService
-	AdminService       *service.AdminService
+	Pool                *pgxpool.Pool
+	Mongo               *mongo.Client
+	JWT                 *helper.JWTManager
+	Permissions         *helper.PermissionSet
+	StudentService      *service.StudentService
+	AuthService         *service.AuthService
+	CourseService       *service.CourseService
+	SupervisionService  *service.SupervisionService
+	PortfolioService    *service.PortfolioService
+	ReviewService       *service.ReviewService
+	NotificationService *service.NotificationService
+	AdminService        *service.AdminService
 }
 
 func Register(app *fiber.App, deps Dependencies) {
@@ -57,7 +58,6 @@ func Register(app *fiber.App, deps Dependencies) {
 		middleware.RequirePermission(perms, "student:delete"),
 		deps.StudentService.Delete)
 
-	// Hak bergantung pada kepemilikan data -> diperiksa di service.
 	studentRoutes.Get("/:id", deps.StudentService.Get)
 	studentRoutes.Put("/:id", deps.StudentService.Replace)
 	studentRoutes.Patch("/:id", deps.StudentService.Patch)
@@ -89,6 +89,12 @@ func Register(app *fiber.App, deps Dependencies) {
 		middleware.RequirePermission(perms, "course:manage"))
 
 	admin.Get("/queue", deps.AdminService.Queue)
+
+	notifications := api.Group("/notifications",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT))
+
+	notifications.Get("/mine", deps.NotificationService.Mine)
 
 	courses := api.Group("/courses",
 		middleware.RequireJSON,

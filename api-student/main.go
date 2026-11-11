@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"backend-go/api-student/app/job"
 	"backend-go/api-student/app/repository"
 	"backend-go/api-student/app/service"
 	"backend-go/api-student/config"
@@ -25,6 +27,10 @@ func main() {
 
 	logger := config.NewLogger()
 
+	role := flag.String("role", config.GetEnv("APP_ROLE", "all"), "peran proses: api, worker, atau all")
+
+	flag.Parse()
+
 	jwtSecret := config.GetEnv("JWT_SECRET", "")
 
 	if len(jwtSecret) < minSecretLength {
@@ -41,6 +47,24 @@ func main() {
 	}
 
 	defer pool.Close()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+
+	defer stop()
+
+	stopWorker := func() {}
+
+	if *role != "api" {
+		stopWorker = startWorker(ctx, logger, pool)
+	}
+
+	if *role == "worker" {
+		<-ctx.Done()
+
+		stopWorker()
+
+		return
+	}
 
 	mongoClient, err := database.NewMongoClient(context.Background())
 
@@ -82,6 +106,8 @@ func main() {
 
 	outboxRepository := repository.NewOutboxRepository(pool)
 
+	notificationRepository := repository.NewNotificationRepository(pool)
+
 	txManager := repository.NewTxManager(pool)
 
 	courseService := service.NewCourseService(courseRepository, txManager, outboxRepository)
@@ -106,28 +132,9 @@ func main() {
 
 	reviewService := service.NewReviewService(reviewRepository)
 
-	mailer := job.NewMailer(job.LogPath())
+	notificationService := service.NewNotificationService(notificationRepository)
 
-	asynqClient := asynq.NewClient(job.NewRedisOpt())
-
-	defer asynqClient.Close()
-
-	relay := job.NewRelay(outboxRepository, asynqClient)
-
-	go relay.Run(context.Background())
-
-	worker := job.NewWorker(outboxRepository, mailer)
-
-	adminService := service.NewAdminService(outboxRepository)
-
-	mux := asynq.NewServeMux()
-	mux.HandleFunc(job.TaskTypeKirimNotifikasi, worker.Handler)
-
-	go func() {
-		if err := job.NewServer().Run(mux); err != nil {
-			logger.Error("worker berhenti", slog.String("error", err.Error()))
-		}
-	}()
+	adminService := service.NewAdminService(outboxRepository, asynq.NewInspector(config.RedisOpt()))
 
 	jwtManager := helper.NewJWTManager(
 		jwtSecret,
@@ -144,22 +151,35 @@ func main() {
 	)
 
 	app := config.NewApp(logger, route.Dependencies{
-		Pool:               pool,
-		Mongo:              mongoClient,
-		JWT:                jwtManager,
-		Permissions:        permissions,
-		StudentService:     studentService,
-		AuthService:        authService,
-		CourseService:      courseService,
-		SupervisionService: supervisionService,
-		PortfolioService:   portfolioService,
-		ReviewService:      reviewService,
-		AdminService:       adminService,
+		Pool:                pool,
+		Mongo:               mongoClient,
+		JWT:                 jwtManager,
+		Permissions:         permissions,
+		StudentService:      studentService,
+		AuthService:         authService,
+		CourseService:       courseService,
+		SupervisionService:  supervisionService,
+		PortfolioService:    portfolioService,
+		ReviewService:       reviewService,
+		NotificationService: notificationService,
+		AdminService:        adminService,
 	})
-
-	logger.Info("server berjalan")
 
 	port := config.GetEnv("APP_PORT", "3000")
 
-	log.Fatal(app.Listen(":" + port))
+	go func() {
+		if err := app.Listen(":" + port); err != nil {
+			logger.Error("server berhenti", slog.String("error", err.Error()))
+		}
+	}()
+
+	logger.Info("server berjalan")
+
+	<-ctx.Done()
+
+	if err := app.Shutdown(); err != nil {
+		logger.Error("gagal menghentikan server", slog.String("error", err.Error()))
+	}
+
+	stopWorker()
 }
