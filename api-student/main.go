@@ -54,6 +54,8 @@ func main() {
 		_ = mongoClient.Disconnect(ctx)
 	}()
 
+	mongoDB := mongoClient.Database(config.GetEnv("MONGO_DATABASE", "go_backend"))
+
 	studentRepository := repository.NewStudentRepository(pool)
 	userRepository := repository.NewUserRepository(pool)
 	tokenRepository := repository.NewTokenRepository(pool)
@@ -81,6 +83,15 @@ func main() {
 
 	supervisionService := service.NewSupervisionService(supervisorRepository, txManager)
 
+	portfolioRepository := repository.NewPortfolioRepository(mongoDB)
+
+	if err := portfolioRepository.EnsureIndexes(context.Background()); err != nil {
+		logger.Error("gagal menyiapkan index portofolio", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	portfolioService := service.NewPortfolioService(studentRepository, portfolioRepository)
+
 	jwtManager := helper.NewJWTManager(
 		jwtSecret,
 		config.GetEnv("JWT_ISSUER", "praktikum-backend"),
@@ -104,6 +115,7 @@ func main() {
 		AuthService:        authService,
 		CourseService:      courseService,
 		SupervisionService: supervisionService,
+		PortfolioService:   portfolioService,
 	})
 
 	logger.Info("server berjalan")
