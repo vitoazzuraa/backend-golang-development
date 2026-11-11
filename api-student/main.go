@@ -92,6 +92,15 @@ func main() {
 
 	portfolioService := service.NewPortfolioService(studentRepository, portfolioRepository)
 
+	reviewRepository := repository.NewReviewRepository(mongoDB)
+
+	if err := reviewRepository.EnsureIndexes(context.Background()); err != nil {
+		logger.Error("gagal menyiapkan index ulasan", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	reviewService := service.NewReviewService(reviewRepository)
+
 	jwtManager := helper.NewJWTManager(
 		jwtSecret,
 		config.GetEnv("JWT_ISSUER", "praktikum-backend"),
@@ -116,6 +125,7 @@ func main() {
 		CourseService:      courseService,
 		SupervisionService: supervisionService,
 		PortfolioService:   portfolioService,
+		ReviewService:      reviewService,
 	})
 
 	logger.Info("server berjalan")
