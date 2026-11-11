@@ -7,12 +7,15 @@ import (
 	"os"
 	"time"
 
+	"backend-go/api-student/app/job"
 	"backend-go/api-student/app/repository"
 	"backend-go/api-student/app/service"
 	"backend-go/api-student/config"
 	"backend-go/api-student/database"
 	"backend-go/api-student/helper"
 	"backend-go/api-student/route"
+
+	"github.com/hibiken/asynq"
 )
 
 const minSecretLength = 32
@@ -100,6 +103,29 @@ func main() {
 	}
 
 	reviewService := service.NewReviewService(reviewRepository)
+
+	outboxRepository := repository.NewOutboxRepository(pool)
+
+	mailer := job.NewMailer(job.LogPath())
+
+	asynqClient := asynq.NewClient(job.NewRedisOpt())
+
+	defer asynqClient.Close()
+
+	relay := job.NewRelay(outboxRepository, asynqClient)
+
+	go relay.Run(context.Background())
+
+	worker := job.NewWorker(outboxRepository, mailer)
+
+	mux := asynq.NewServeMux()
+	mux.HandleFunc(job.TaskTypeKirimNotifikasi, worker.Handler)
+
+	go func() {
+		if err := job.NewServer().Run(mux); err != nil {
+			logger.Error("worker berhenti", slog.String("error", err.Error()))
+		}
+	}()
 
 	jwtManager := helper.NewJWTManager(
 		jwtSecret,
