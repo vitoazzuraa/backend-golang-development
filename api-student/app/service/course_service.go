@@ -14,10 +14,11 @@ import (
 type CourseService struct {
 	courses repository.CourseRepository
 	tx      *repository.TxManager
+	outbox  repository.OutboxRepository
 }
 
-func NewCourseService(courses repository.CourseRepository, tx *repository.TxManager) *CourseService {
-	return &CourseService{courses: courses, tx: tx}
+func NewCourseService(courses repository.CourseRepository, tx *repository.TxManager, outbox repository.OutboxRepository) *CourseService {
+	return &CourseService{courses: courses, tx: tx, outbox: outbox}
 }
 
 func (s *CourseService) List(c *fiber.Ctx) error {
@@ -134,7 +135,12 @@ func (s *CourseService) Enroll(c *fiber.Ctx) error {
 			return err
 		}
 
-		return repo.InsertEnrollment(ctx, courseID, current.UserID)
+		if err := repo.InsertEnrollment(ctx, courseID, current.UserID); err != nil {
+			return err
+		}
+
+		return s.outbox.InsertEvent(ctx, tx, "enrollment.created",
+			[]byte(`{"user_id":`+strconv.Itoa(current.UserID)+`,"course_id":`+strconv.Itoa(courseID)+`,"username":"`+current.Username+`"}`))
 	})
 
 	if err != nil {
@@ -173,9 +179,12 @@ func (s *CourseService) Drop(c *fiber.Ctx) error {
 			return err
 		}
 
-		_, err := repo.DecrementEnrolled(ctx, courseID)
+		if _, err := repo.DecrementEnrolled(ctx, courseID); err != nil {
+			return err
+		}
 
-		return err
+		return s.outbox.InsertEvent(ctx, tx, "enrollment.cancelled",
+			[]byte(`{"user_id":`+strconv.Itoa(current.UserID)+`,"course_id":`+strconv.Itoa(courseID)+`,"username":"`+current.Username+`"}`))
 	})
 
 	if err != nil {
@@ -261,7 +270,12 @@ func (s *CourseService) Swap(c *fiber.Ctx) error {
 			return err
 		}
 
-		return repo.InsertEnrollment(ctx, req.ToCourseID, current.UserID)
+		if err := repo.InsertEnrollment(ctx, req.ToCourseID, current.UserID); err != nil {
+			return err
+		}
+
+		return s.outbox.InsertEvent(ctx, tx, "enrollment.swapped",
+			[]byte(`{"user_id":`+strconv.Itoa(current.UserID)+`,"from_course_id":`+strconv.Itoa(req.FromCourseID)+`,"to_course_id":`+strconv.Itoa(req.ToCourseID)+`,"username":"`+current.Username+`"}`))
 	})
 
 	if err != nil {

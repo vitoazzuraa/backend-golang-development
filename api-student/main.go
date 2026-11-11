@@ -80,9 +80,11 @@ func main() {
 
 	studentService := service.NewStudentService(studentRepository, permissions)
 
+	outboxRepository := repository.NewOutboxRepository(pool)
+
 	txManager := repository.NewTxManager(pool)
 
-	courseService := service.NewCourseService(courseRepository, txManager)
+	courseService := service.NewCourseService(courseRepository, txManager, outboxRepository)
 
 	supervisionService := service.NewSupervisionService(supervisorRepository, txManager)
 
@@ -103,8 +105,6 @@ func main() {
 	}
 
 	reviewService := service.NewReviewService(reviewRepository)
-
-	outboxRepository := repository.NewOutboxRepository(pool)
 
 	mailer := job.NewMailer(job.LogPath())
 
