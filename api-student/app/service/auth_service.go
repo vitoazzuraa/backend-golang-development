@@ -201,7 +201,7 @@ func (s *AuthService) Me(c *fiber.Ctx) error {
 }
 
 func (s *AuthService) issueTokenPair(ctx context.Context, user model.User) (model.TokenPair, error) {
-	accessToken, err := s.jwt.GenerateAccess(user)
+	accessToken, err := s.jwt.GenerateAccessToken(model.AuthUser{UserID: user.ID, Username: user.Username, Role: user.Role})
 
 	if err != nil {
 		return model.TokenPair{}, err

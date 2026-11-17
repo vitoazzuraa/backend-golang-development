@@ -36,8 +36,8 @@ func (r *notificationPostgresRepository) Claim(ctx context.Context, outboxID int
 	var id int64
 
 	err := r.db.QueryRow(ctx,
-		`INSERT INTO notifications (outbox_id, user_id, subject, body)
-		 VALUES ($1, $2, $3, $4)
+		`INSERT INTO notifications (outbox_id, user_id, subject, body, channel)
+		 VALUES ($1, $2, $3, $4, 'email')
 		 ON CONFLICT (outbox_id, user_id) DO NOTHING
 		 RETURNING id`, outboxID, userID, subject, body).Scan(&id)
 
@@ -65,10 +65,11 @@ func (r *notificationPostgresRepository) MarkSent(ctx context.Context, outboxID 
 
 func (r *notificationPostgresRepository) FindByUser(ctx context.Context, userID int) ([]model.Notification, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, outbox_id, user_id, subject, body, sent_at
+		`SELECT id, outbox_id, user_id, subject, body, channel, sent_at
 		 FROM notifications
 		 WHERE user_id = $1
-		 ORDER BY outbox_id DESC`, userID)
+		 ORDER BY outbox_id DESC
+		 LIMIT 20`, userID)
 
 	if err != nil {
 		return nil, fmt.Errorf("mengambil notifikasi: %w", err)
@@ -81,7 +82,7 @@ func (r *notificationPostgresRepository) FindByUser(ctx context.Context, userID 
 	for rows.Next() {
 		var n model.Notification
 
-		if err := rows.Scan(&n.ID, &n.OutboxID, &n.UserID, &n.Subject, &n.Body, &n.SentAt); err != nil {
+		if err := rows.Scan(&n.ID, &n.OutboxID, &n.UserID, &n.Subject, &n.Body, &n.Channel, &n.SentAt); err != nil {
 			return nil, fmt.Errorf("membaca notifikasi: %w", err)
 		}
 

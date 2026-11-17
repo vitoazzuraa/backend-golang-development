@@ -30,7 +30,7 @@ type Dependencies struct {
 
 func Register(app *fiber.App, deps Dependencies) {
 	app.Get("/", func(c *fiber.Ctx) error {
-		return helper.Ok(c, "API Students - PostgreSQL", nil)
+		return helper.Success(c, fiber.StatusOK, "API Students - PostgreSQL", nil)
 	})
 
 	api := app.Group("/api/v1")
@@ -78,15 +78,15 @@ func Register(app *fiber.App, deps Dependencies) {
 		middleware.RequireAuth(deps.JWT))
 
 	reviews.Get("/:id", deps.ReviewService.Get)
-	reviews.Put("/:id", deps.ReviewService.Update)
+	reviews.Patch("/:id", deps.ReviewService.Update)
 	reviews.Delete("/:id", deps.ReviewService.Delete)
-	reviews.Post("/:id/replies", deps.ReviewService.AddReply)
+	reviews.Post("/:id/replies", deps.ReviewService.Reply)
 	reviews.Post("/:id/helpful", deps.ReviewService.MarkHelpful)
 
 	admin := api.Group("/admin",
 		middleware.RequireJSON,
 		middleware.RequireAuth(deps.JWT),
-		middleware.RequirePermission(perms, "course:manage"))
+		middleware.RequirePermission(perms, "queue:monitor"))
 
 	admin.Get("/queue", deps.AdminService.Queue)
 
@@ -108,7 +108,7 @@ func Register(app *fiber.App, deps Dependencies) {
 	courses.Patch("/:id", middleware.RequirePermission(perms, "course:manage"),
 		deps.CourseService.UpdateQuota)
 
-	courses.Get("/:id/reviews", deps.ReviewService.List)
+	courses.Get("/:id/reviews", deps.ReviewService.ListByCourse)
 	courses.Get("/:id/reviews/summary", deps.ReviewService.Summary)
 	courses.Post("/:id/reviews", deps.ReviewService.Create)
 
@@ -153,6 +153,6 @@ func healthCheck(pool *pgxpool.Pool, mongoClient *mongo.Client) fiber.Handler {
 			return helper.ServiceUnavailable("MongoDB tidak dapat dihubungi")
 		}
 
-		return helper.Ok(c, "server, PostgreSQL, dan MongoDB berjalan", nil)
+		return helper.Success(c, fiber.StatusOK, "server, PostgreSQL, dan MongoDB berjalan", nil)
 	}
 }

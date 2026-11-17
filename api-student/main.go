@@ -110,7 +110,7 @@ func main() {
 
 	txManager := repository.NewTxManager(pool)
 
-	courseService := service.NewCourseService(courseRepository, txManager, outboxRepository)
+	courseService := service.NewCourseService(courseRepository, outboxRepository, txManager)
 
 	supervisionService := service.NewSupervisionService(supervisorRepository, txManager)
 
@@ -130,7 +130,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	reviewService := service.NewReviewService(reviewRepository)
+	reviewService := service.NewReviewService(reviewRepository, courseRepository, permissions)
 
 	notificationService := service.NewNotificationService(notificationRepository)
 

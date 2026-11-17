@@ -15,7 +15,7 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-const TaskTypeKirimNotifikasi = "notifikasi:kirim"
+const TaskSendNotification = "notifikasi:kirim"
 
 type Mailer struct {
 	delay     time.Duration
@@ -87,12 +87,12 @@ func (r *Relay) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			r.kirimSekali(ctx)
+			r.publishOnce(ctx)
 		}
 	}
 }
 
-func (r *Relay) kirimSekali(ctx context.Context) {
+func (r *Relay) publishOnce(ctx context.Context) {
 	events, err := r.outbox.FindUnpublished(ctx, r.batch)
 
 	if err != nil || len(events) == 0 {
@@ -102,7 +102,7 @@ func (r *Relay) kirimSekali(ctx context.Context) {
 	ids := make([]int64, 0, len(events))
 
 	for _, event := range events {
-		task := asynq.NewTask(TaskTypeKirimNotifikasi, []byte(event.Payload),
+		task := asynq.NewTask(TaskSendNotification, []byte(event.Payload),
 			asynq.TaskID(strconv.FormatInt(event.ID, 10)),
 			asynq.MaxRetry(5))
 

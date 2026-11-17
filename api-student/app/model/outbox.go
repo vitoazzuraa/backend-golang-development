@@ -16,5 +16,6 @@ type Notification struct {
 	UserID   int        `json:"user_id"`
 	Subject  string     `json:"subject"`
 	Body     string     `json:"body"`
+	Channel  string     `json:"channel"`
 	SentAt   *time.Time `json:"sent_at,omitempty"`
 }

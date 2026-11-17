@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"backend-go/api-student/app/model"
@@ -105,6 +106,8 @@ func parseID(id string) (bson.ObjectID, error) {
 
 func (r *reviewMongoRepository) EnsureIndexes(ctx context.Context) error {
 	_, err := r.coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.D{{Key: "course_id", Value: 1}, {Key: "user_id", Value: 1}},
+			Options: options.Index().SetUnique(true).SetName("course_user_unique")},
 		{Keys: bson.D{{Key: "course_id", Value: 1}, {Key: "created_at", Value: -1}}},
 		{Keys: bson.D{{Key: "tags", Value: 1}}},
 	})
@@ -132,6 +135,10 @@ func (r *reviewMongoRepository) Create(ctx context.Context, input model.Review) 
 	}
 
 	if _, err := r.coll.InsertOne(ctx, doc); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return model.Review{}, ErrDuplicate
+		}
+
 		return model.Review{}, fmt.Errorf("menyimpan ulasan: %w", err)
 	}
 
@@ -319,7 +326,7 @@ func (r *reviewMongoRepository) MarkHelpful(ctx context.Context, id string, user
 	}
 
 	result, err := r.coll.UpdateOne(ctx,
-		bson.M{"_id": oid, "helpful_by": bson.M{"$ne": userID}},
+		bson.M{"_id": oid, "user_id": bson.M{"$ne": userID}, "helpful_by": bson.M{"$ne": userID}},
 		bson.M{"$addToSet": bson.M{"helpful_by": userID}, "$inc": bson.M{"helpful_count": 1}})
 
 	if err != nil {
@@ -327,8 +334,14 @@ func (r *reviewMongoRepository) MarkHelpful(ctx context.Context, id string, user
 	}
 
 	if result.MatchedCount == 0 {
-		if _, findErr := r.FindByID(ctx, id); findErr != nil {
+		existing, findErr := r.FindByID(ctx, id)
+
+		if findErr != nil {
 			return model.Review{}, findErr
+		}
+
+		if existing.UserID == userID {
+			return model.Review{}, ErrOwnReview
 		}
 
 		return model.Review{}, ErrAlreadyVoted
@@ -341,26 +354,26 @@ func (r *reviewMongoRepository) Summary(ctx context.Context, courseID int) (mode
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.M{"course_id": courseID}}},
 		bson.D{{Key: "$facet", Value: bson.M{
-			"angka": mongo.Pipeline{
+			"Value": mongo.Pipeline{
 				bson.D{{Key: "$group", Value: bson.D{
 					{Key: "_id", Value: nil},
-					{Key: "jumlah", Value: bson.D{{Key: "$sum", Value: 1}}},
+					{Key: "Total", Value: bson.D{{Key: "$sum", Value: 1}}},
 					{Key: "rata", Value: bson.D{{Key: "$avg", Value: "$rating"}}},
 				}}},
 			},
-			"sebaran": mongo.Pipeline{
+			"Spread": mongo.Pipeline{
 				bson.D{{Key: "$group", Value: bson.D{
 					{Key: "_id", Value: "$rating"},
-					{Key: "jumlah", Value: bson.D{{Key: "$sum", Value: 1}}},
+					{Key: "Total", Value: bson.D{{Key: "$sum", Value: 1}}},
 				}}},
 			},
 			"tag": mongo.Pipeline{
 				bson.D{{Key: "$unwind", Value: "$tags"}},
 				bson.D{{Key: "$group", Value: bson.D{
 					{Key: "_id", Value: "$tags"},
-					{Key: "jumlah", Value: bson.D{{Key: "$sum", Value: 1}}},
+					{Key: "Total", Value: bson.D{{Key: "$sum", Value: 1}}},
 				}}},
-				bson.D{{Key: "$sort", Value: bson.D{{Key: "jumlah", Value: -1}, {Key: "_id", Value: 1}}}},
+				bson.D{{Key: "$sort", Value: bson.D{{Key: "Total", Value: -1}, {Key: "_id", Value: 1}}}},
 				bson.D{{Key: "$limit", Value: 5}},
 			},
 		}}},
@@ -375,17 +388,17 @@ func (r *reviewMongoRepository) Summary(ctx context.Context, courseID int) (mode
 	defer cursor.Close(ctx)
 
 	var hasil []struct {
-		Angka []struct {
-			Jumlah int     `bson:"jumlah"`
-			Rata   float64 `bson:"rata"`
-		} `bson:"angka"`
-		Sebaran []struct {
-			ID     int `bson:"_id"`
-			Jumlah int `bson:"jumlah"`
-		} `bson:"sebaran"`
+		Value []struct {
+			Total int     `bson:"Total"`
+			Rata  float64 `bson:"rata"`
+		} `bson:"Value"`
+		Spread []struct {
+			ID    int `bson:"_id"`
+			Total int `bson:"Total"`
+		} `bson:"Spread"`
 		Tag []struct {
-			ID     string `bson:"_id"`
-			Jumlah int    `bson:"jumlah"`
+			ID    string `bson:"_id"`
+			Total int    `bson:"Total"`
 		} `bson:"tag"`
 	}
 
@@ -403,17 +416,25 @@ func (r *reviewMongoRepository) Summary(ctx context.Context, courseID int) (mode
 		return summary, nil
 	}
 
-	for _, item := range hasil[0].Angka {
-		summary.Count = item.Jumlah
-		summary.AverageRating = item.Rata
+	for _, item := range hasil[0].Value {
+		summary.Count = item.Total
+		summary.AverageRating = math.Round(item.Rata*100) / 100
 	}
 
-	for _, item := range hasil[0].Sebaran {
-		summary.Distribution[fmt.Sprintf("%d", item.ID)] = item.Jumlah
+	for _, item := range hasil[0].Spread {
+		summary.Distribution[fmt.Sprintf("%d", item.ID)] = item.Total
 	}
 
 	for _, item := range hasil[0].Tag {
-		summary.TopTags = append(summary.TopTags, model.TagCount{Tag: item.ID, Total: item.Jumlah})
+		summary.TopTags = append(summary.TopTags, model.TagCount{Tag: item.ID, Total: item.Total})
+	}
+
+	for bintang := 1; bintang <= 5; bintang++ {
+		kunci := fmt.Sprintf("%d", bintang)
+
+		if _, ada := summary.Distribution[kunci]; !ada {
+			summary.Distribution[kunci] = 0
+		}
 	}
 
 	return summary, nil

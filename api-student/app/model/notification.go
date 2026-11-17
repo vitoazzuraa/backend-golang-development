@@ -52,8 +52,8 @@ type QueueInfo struct {
 type QueueStats struct {
 	OutboxPending        int        `json:"outbox_pending"`
 	OutboxTotal          int        `json:"outbox_total"`
-	NotifikasiBelumKirim int        `json:"notifikasi_belum_kirim"`
-	NotifikasiTotal      int        `json:"notifikasi_total"`
+	PendingNotifications int        `json:"notifikasi_belum_kirim"`
+	TotalNotifications   int        `json:"notifikasi_total"`
 	Queue                *QueueInfo `json:"queue,omitempty"`
 	QueueError           string     `json:"queue_error"`
 }

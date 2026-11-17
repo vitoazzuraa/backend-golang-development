@@ -183,8 +183,8 @@ func makeToken(a account) string {
 	issuer := config.GetEnv("JWT_ISSUER", "praktikum-backend")
 	mgr := helper.NewJWTManager(secret, issuer, 15*time.Minute)
 
-	token, _ := mgr.GenerateAccess(model.User{
-		ID:       int(a.ID),
+	token, _ := mgr.GenerateAccessToken(model.AuthUser{
+		UserID:   int(a.ID),
 		Username: a.Username,
 		Role:     "user",
 	})

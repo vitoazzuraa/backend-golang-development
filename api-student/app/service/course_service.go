@@ -17,7 +17,7 @@ type CourseService struct {
 	outbox  repository.OutboxRepository
 }
 
-func NewCourseService(courses repository.CourseRepository, tx *repository.TxManager, outbox repository.OutboxRepository) *CourseService {
+func NewCourseService(courses repository.CourseRepository, outbox repository.OutboxRepository, tx *repository.TxManager) *CourseService {
 	return &CourseService{courses: courses, tx: tx, outbox: outbox}
 }
 

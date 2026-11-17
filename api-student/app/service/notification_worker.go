@@ -61,13 +61,11 @@ func (w *NotificationWorker) HandleSend(ctx context.Context, t *asynq.Task) erro
 		return err
 	}
 
-	msg, err := BuildMessage(event, job.EventType)
+	msg, err := BuildMessage(job.EventType, event, user)
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", asynq.SkipRetry, err)
 	}
-
-	msg.To = user.Email
 
 	alreadySent := false
 

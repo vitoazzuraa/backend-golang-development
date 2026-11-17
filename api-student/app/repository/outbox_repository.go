@@ -96,17 +96,17 @@ func (r *outboxPostgresRepository) MarkPublished(ctx context.Context, ids []int6
 func (r *outboxPostgresRepository) Stats(ctx context.Context) (model.QueueStats, error) {
 	stats := model.QueueStats{}
 
-	pernyataan := []struct {
+	stmt := []struct {
 		target *int
 		sql    string
 	}{
 		{&stats.OutboxPending, "SELECT count(*) FROM outbox WHERE published_at IS NULL"},
 		{&stats.OutboxTotal, "SELECT count(*) FROM outbox"},
-		{&stats.NotifikasiBelumKirim, "SELECT count(*) FROM notifications WHERE sent_at IS NULL"},
-		{&stats.NotifikasiTotal, "SELECT count(*) FROM notifications"},
+		{&stats.PendingNotifications, "SELECT count(*) FROM notifications WHERE sent_at IS NULL"},
+		{&stats.TotalNotifications, "SELECT count(*) FROM notifications"},
 	}
 
-	for _, item := range pernyataan {
+	for _, item := range stmt {
 		if err := r.db.QueryRow(ctx, item.sql).Scan(item.target); err != nil {
 			return model.QueueStats{}, fmt.Errorf("menghitung antrean: %w", err)
 		}
@@ -179,11 +179,11 @@ func (r *outboxPostgresRepository) MarkSent(ctx context.Context, outboxID int64)
 }
 
 func (r *outboxPostgresRepository) QueueStatus(ctx context.Context) (map[string]int, error) {
-	hasil := map[string]int{}
+	result := map[string]int{}
 
-	pernyataan := []struct {
-		kunci string
-		sql   string
+	stmt := []struct {
+		key string
+		sql string
 	}{
 		{"outbox_belum_publish", "SELECT count(*) FROM outbox WHERE published_at IS NULL"},
 		{"outbox_total", "SELECT count(*) FROM outbox"},
@@ -191,15 +191,15 @@ func (r *outboxPostgresRepository) QueueStatus(ctx context.Context) (map[string]
 		{"notifikasi_total", "SELECT count(*) FROM notifications"},
 	}
 
-	for _, item := range pernyataan {
+	for _, item := range stmt {
 		var jumlah int
 
 		if err := r.db.QueryRow(ctx, item.sql).Scan(&jumlah); err != nil {
 			return nil, fmt.Errorf("menghitung antrean: %w", err)
 		}
 
-		hasil[item.kunci] = jumlah
+		result[item.key] = jumlah
 	}
 
-	return hasil, nil
+	return result, nil
 }

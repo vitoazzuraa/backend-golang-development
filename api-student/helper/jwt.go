@@ -41,14 +41,14 @@ func (m *JWTManager) AccessTTL() time.Duration {
 	return m.accessTTL
 }
 
-func (m *JWTManager) GenerateAccess(u model.User) (string, error) {
+func (m *JWTManager) GenerateAccessToken(u model.AuthUser) (string, error) {
 	now := time.Now()
 
 	claims := accessClaims{
 		Username: u.Username,
 		Role:     u.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   strconv.Itoa(u.ID),
+			Subject:   strconv.Itoa(u.UserID),
 			Issuer:    m.issuer,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.accessTTL)),
