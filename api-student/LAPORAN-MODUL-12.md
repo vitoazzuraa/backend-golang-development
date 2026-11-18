@@ -145,6 +145,32 @@ tiga kali dan semuanya lulus.
 
 Commit: `tambah test service ulasan lewat HTTP`
 
+### 2.6 Test penerjemah galat
+
+Berkas: `app/service/review_errors_test.go`
+
+Fungsi `translateReviewError` memutuskan status code untuk setiap kegagalan.
+Ia kecil, tapi sangat menentukan, karena dari situlah pengguna tahu apa yang
+sebenarnya terjadi.
+
+Sembilan kasus diuji, termasuk satu yang menarik: error yang sudah dibungkus
+berlapis dengan `fmt.Errorf` tetap harus dikenali. Ini berkat `errors.Is` yang
+menembus lapisan pembungkus.
+
+Di sini muncul kesalahan ketiga. Modul menulis test ini berpaket `service_test`,
+yaitu black-box yang hanya boleh memakai yang di-export. Tapi ia memanggil
+`translateReviewError` yang tidak di-export. Hasilnya:
+
+    undefined: service.translateReviewError
+
+Kedua hal itu bertentangan. Saya memilih memindahkan test ke paket `service`
+supaya boleh memanggil fungsinya, karena mengubah kode produksi untuk memuji
+test justru kurang tepat.
+
+Setelah disesuaikan, sembilan subtest semuanya lulus.
+
+Commit: `tambah test penerjemah galat`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
@@ -156,6 +182,7 @@ gejala, akar masalah, dan cara memperbaikinya.
 |---|---|---|---|---|---|
 | 1 | `app/service/review_rules_test.go`, fungsi `TestNormalizeTags` | kode tidak bisa diperiksa, muncul pesan `wrong signature for TestNormalizeTags` | tanda tangan fungsi memakai `t testing.T` berupa nilai, sedangkan kerangka test Go menghendaki `t *testing.T` berupa alamat | tambahkan tanda bintang menjadi `func TestNormalizeTags(t *testing.T)` | compiler |
 | 2 | `app/service/review_service_test.go`, variabel `sharedReviews` | test lulus bila dijalankan berurutan, tetapi gagal bila urutannya diacak | satu tiruan repository dipakai bersama oleh seluruh test, sehingga test yang berjalan lebih dulu meninggalkan sisa data yang mengganggu test berikutnya | setiap test kini membuat tiruannya sendiri melalui `newFakeReviewRepo()` | uji dengan `-shuffle` |
+| 3 | `app/service/review_errors_test.go` | kode tidak bisa diperiksa, muncul `undefined: service.translateReviewError` | test ditulis berpaket `service_test` yang bersifat black-box, tetapi memanggil `translateReviewError` yang tidak di-export. Keduanya bertentangan | test dipindahkan ke paket `service` supaya boleh memanggil fungsinya | compiler |
 
 ---
 
