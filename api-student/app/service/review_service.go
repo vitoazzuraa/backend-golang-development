@@ -25,6 +25,14 @@ func NewReviewService(
 	return &ReviewService{reviews: reviews, courses: courses, perms: perms}
 }
 
+// @Summary      Membuat ulasan kelas
+// @Tags         reviews
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int                        true  "id kelas"
+// @Param        body body      model.CreateReviewRequest  true  "isi ulasan"
+// @Success      201  {object}  map[string]any
+// @Router       /courses/{id}/reviews [post]
 func (s *ReviewService) Create(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 
@@ -82,6 +90,13 @@ func (s *ReviewService) Create(c *fiber.Ctx) error {
 	return helper.Created(c, "ulasan berhasil disimpan", created, "/api/v1/reviews/"+created.ID)
 }
 
+// @Summary      Daftar ulasan satu kelas
+// @Tags         reviews
+// @Produce      json
+// @Param        id   path   int     true   "id kelas"
+// @Param        tag  query  string  false  "saring berdasarkan tag"
+// @Success      200  {object}  map[string]any
+// @Router       /courses/{id}/reviews [get]
 func (s *ReviewService) ListByCourse(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 
@@ -133,6 +148,12 @@ func (s *ReviewService) ListByCourse(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary      Ringkasan statistik ulasan
+// @Tags         reviews
+// @Produce      json
+// @Param        id  path  int  true  "id kelas"
+// @Success      200  {object}  map[string]any
+// @Router       /courses/{id}/reviews/summary [get]
 func (s *ReviewService) Summary(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 
@@ -157,6 +178,12 @@ func (s *ReviewService) Summary(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "ringkasan ulasan berhasil diambil", summary)
 }
 
+// @Summary      Membaca satu ulasan
+// @Tags         reviews
+// @Produce      json
+// @Param        id  path  int  true  "id ulasan"
+// @Success      200  {object}  map[string]any
+// @Router       /reviews/{id} [get]
 func (s *ReviewService) Get(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 
@@ -171,6 +198,14 @@ func (s *ReviewService) Get(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "ulasan ditemukan", review)
 }
 
+// @Summary      Mengubah ulasan milik sendiri
+// @Tags         reviews
+// @Accept       json
+// @Produce      json
+// @Param        id   path  int  true  "id ulasan"
+// @Param        body body  model.UpdateReviewRequest  true  "perubahan"
+// @Success      200  {object}  map[string]any
+// @Router       /reviews/{id} [put]
 func (s *ReviewService) Update(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 
@@ -215,6 +250,12 @@ func (s *ReviewService) Update(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusOK, "ulasan berhasil diubah", updated)
 }
 
+// @Summary      Menghapus ulasan
+// @Tags         reviews
+// @Produce      json
+// @Param        id  path  int  true  "id ulasan"
+// @Success      204  {object}  map[string]any
+// @Router       /reviews/{id} [delete]
 func (s *ReviewService) Delete(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 
@@ -235,6 +276,14 @@ func (s *ReviewService) Delete(c *fiber.Ctx) error {
 	return helper.NoContent(c)
 }
 
+// @Summary      Menambah balasan pada ulasan
+// @Tags         reviews
+// @Accept       json
+// @Produce      json
+// @Param        id   path  int  true  "id ulasan"
+// @Param        body body  model.ReplyRequest  true  "isi balasan"
+// @Success      201  {object}  map[string]any
+// @Router       /reviews/{id}/replies [post]
 func (s *ReviewService) Reply(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 
@@ -269,6 +318,12 @@ func (s *ReviewService) Reply(c *fiber.Ctx) error {
 	return helper.Success(c, fiber.StatusCreated, "balasan berhasil ditambahkan", updated)
 }
 
+// @Summary      Menandai ulasan sebagai membantu
+// @Tags         reviews
+// @Produce      json
+// @Param        id  path  int  true  "id ulasan"
+// @Success      200  {object}  map[string]any
+// @Router       /reviews/{id}/helpful [post]
 func (s *ReviewService) MarkHelpful(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 
