@@ -241,6 +241,37 @@ dan menampilkan pesan yang benar.
 
 Commit: `tambah penyiapan integration test`
 
+### 2.9 Integration test repository kelas dan notifikasi
+
+Berkas: `tests/integration/course_repository_test.go`
+
+Berkas ini menguji empat hal terhadap PostgreSQL sungguhan.
+
+Yang pertama, penambahan peserta harus berhenti tepat pada kuota. Ini versi
+otomatis dari uji beban yang dulu saya jalankan manual pada Modul 9.
+
+Yang kedua, pendaftaran yang sama tidak boleh diterima dua kali.
+
+Yang ketiga, dan ini yang paling penting, transaksi yang gagal harus membatalkan
+semua langkahnya, termasuk catatan di outbox. Test ini sengaja mengembalikan
+galat di ujung transaksi, lalu memastikan baik jumlah peserta maupun catatan
+outbox kembali ke nol. Inilah jaminan yang menjadi dasar pola outbox.
+
+Yang keempat, klaim notifikasi hanya boleh terjadi sekali.
+
+Saya menyiapkan database test terpisah bernama `go_backend_test` dan berkas
+pengaturannya. Ini penting, karena integration test menulis dan menghapus data,
+dan nama database yang berakhiran `_test` menjadi pengaman supaya tidak pernah
+menyentuh database yang sedang dipakai untuk bekerja.
+
+Hasil pengujian: 4 test, semuanya lulus dengan database sungguhan.
+
+Satu perbedaan dari modul yang perlu dicatat: modul memanggil `Claim` dengan
+membawa satu objek `model.Notification`, sedangkan kode kita memakai parameter
+terpisah. Fungsinya sama, hanya bentuk pembungkusannya yang berbeda.
+
+Commit: `tambah integration test repository kelas dan notifikasi`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
@@ -266,6 +297,7 @@ belajar. Bukan kesalahan yang harus dibereskan.
 | No | Bagian | Modul | Kode kita | Alasan |
 |---|---|---|---|---|
 | 1 | `FindByCourse` pada `fakeReviewRepo` | `FindByCourse(ctx, courseID int)` | `FindByCourse(ctx, q model.ReviewQuery)` | Modul 10 memakai `model.ReviewQuery`, jadi kode kita sudah sesuai Modul 10. Modul 12 yang tidak konsisten dengan modul sebelumnya, jadi tiruannya yang mengikuti kita |
+| 2 | `Claim` pada `NotificationRepository` | `Claim(ctx, n model.Notification)` | `Claim(ctx, outboxID, userID, subject, body)` | Kode kita dibuat sejak Modul 11 dengan parameter terpisah. Fungsinya sama, hanya bentuk pembungkusannya yang berbeda |
 
 ---
 
