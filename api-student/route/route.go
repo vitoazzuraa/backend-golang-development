@@ -9,6 +9,7 @@ import (
 	"backend-go/api-student/middleware"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -26,6 +27,7 @@ type Dependencies struct {
 	ReviewService       *service.ReviewService
 	NotificationService *service.NotificationService
 	AdminService        *service.AdminService
+	EnableSwagger       bool
 }
 
 func Register(app *fiber.App, deps Dependencies) {
@@ -89,6 +91,10 @@ func Register(app *fiber.App, deps Dependencies) {
 		middleware.RequirePermission(perms, "queue:monitor"))
 
 	admin.Get("/queue", deps.AdminService.Queue)
+
+	if deps.EnableSwagger {
+		app.Get("/swagger/*", swagger.HandlerDefault)
+	}
 
 	notifications := api.Group("/notifications",
 		middleware.RequireJSON,

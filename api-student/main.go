@@ -163,6 +163,8 @@ func main() {
 		ReviewService:       reviewService,
 		NotificationService: notificationService,
 		AdminService:        adminService,
+
+		EnableSwagger: os.Getenv("SWAGGER_ENABLED") == "true",
 	})
 
 	port := config.GetEnv("APP_PORT", "3000")
