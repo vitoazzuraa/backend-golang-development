@@ -171,6 +171,39 @@ Setelah disesuaikan, sembilan subtest semuanya lulus.
 
 Commit: `tambah test penerjemah galat`
 
+### 2.7 Test worker pengirim kabar
+
+Berkas: `app/service/notification_worker_test.go`
+
+Berkas ini menguji worker yang mengirim kabar kepada mahasiswa. Yang menarik,
+testnya berjalan tanpa Redis dan tanpa database sama sekali. Caranya dengan
+memastikan setiap skenario berhenti lebih dulu sebelum transaksi dan pengirim
+email disentuh, sehingga keduanya boleh dikosongkan.
+
+Tiga skenario kegagalan permanen diuji: payload yang bukan JSON, pengguna yang
+sudah dihapus, dan jenis kejadian yang tidak dikenal. Ketiganya harus membuat
+worker berhenti mencoba, karena mencoba lagi tidak akan menolong.
+
+Di sini muncul kesalahan keempat. Ketiga skenario justru dinyatakan gagal,
+padahal keluaran yang tampil jelas menunjukkan pesan yang benar:
+
+    error = skip retry for the task: payload task rusak: ...
+    error = skip retry for the task: user 99 tidak ditemukan: ...
+    error = skip retry for the task: jenis event tidak dikenal: ...
+
+Artinya `asynq.SkipRetry` memang sudah terbungkus dengan benar. Yang keliru
+adalah cara memeriksanya, yaitu `err != asynq.SkipRetry`. Karena error sudah
+terbungkus, perbandingan langsung seperti itu pasti gagal, dan seharusnya
+memakai `errors.Is` yang menembus lapisan pembungkus.
+
+Yang membuatnya menarik, komentar tepat di atas baris itu sudah mengingatkan
+bahwa pemeriksaannya harus memakai `errors.Is`. Jadi komentarnya benar,
+kodenya yang salah.
+
+Setelah diperbaiki, ketiga skenario lulus.
+
+Commit: `tambah test worker pengirim kabar`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
@@ -183,6 +216,7 @@ gejala, akar masalah, dan cara memperbaikinya.
 | 1 | `app/service/review_rules_test.go`, fungsi `TestNormalizeTags` | kode tidak bisa diperiksa, muncul pesan `wrong signature for TestNormalizeTags` | tanda tangan fungsi memakai `t testing.T` berupa nilai, sedangkan kerangka test Go menghendaki `t *testing.T` berupa alamat | tambahkan tanda bintang menjadi `func TestNormalizeTags(t *testing.T)` | compiler |
 | 2 | `app/service/review_service_test.go`, variabel `sharedReviews` | test lulus bila dijalankan berurutan, tetapi gagal bila urutannya diacak | satu tiruan repository dipakai bersama oleh seluruh test, sehingga test yang berjalan lebih dulu meninggalkan sisa data yang mengganggu test berikutnya | setiap test kini membuat tiruannya sendiri melalui `newFakeReviewRepo()` | uji dengan `-shuffle` |
 | 3 | `app/service/review_errors_test.go` | kode tidak bisa diperiksa, muncul `undefined: service.translateReviewError` | test ditulis berpaket `service_test` yang bersifat black-box, tetapi memanggil `translateReviewError` yang tidak di-export. Keduanya bertentangan | test dipindahkan ke paket `service` supaya boleh memanggil fungsinya | compiler |
+| 4 | `app/service/notification_worker_test.go`, fungsi `TestHandleSend_PermanentFailures` | ketiga skenario lulus uji justru dinyatakan gagal, padahal keluaran menunjukkan `skip retry for the task: ...` | pemeriksaan memakai `err != asynq.SkipRetry`, padahal error sudah terbungkus sehingga perlu `errors.Is`. Komentar di atasnya sendiri sudah mengingatkan hal ini | ganti menjadi `errors.Is(err, asynq.SkipRetry)` | uji langsung |
 
 ---
 
