@@ -107,6 +107,44 @@ memakai `model.ReviewQuery`. Jadi tiruannya yang mengikuti bentuk Modul 10.
 
 Commit: `tambah tiruan repository untuk unit test`
 
+### 2.5 Test service ulasan lewat HTTP
+
+Berkas: `app/service/review_service_test.go`
+
+Berkas ini berbeda dari yang tadi. Ia memakai paket `service_test`, artinya
+black-box: ia hanya boleh memakai yang di-export oleh paket service, persis
+seperti kode lain di luar paket. Yang diuji adalah perilaku yang terlihat dari
+luar, yaitu status code dan isi respons.
+
+Cara kerjanya juga lebih lengkap. Aplikasi disusun utuh dengan middleware, route,
+dan error handler yang sama dengan yang dipakai produksi, tetapi repositorinya
+diganti tiruan. Permintaan dikirim memakai `app.Test` yang menjalankan seluruh
+rantai middleware secara langsung, tanpa membuka port jaringan.
+
+Empat test dijalankan: membaca daftar ulasan kosong, membuat ulasan, empat
+penolakan, dan membuat ulasan dua kali.
+
+Waktu dijalankan berurutan, semuanya lulus. Tapi ketika saya menguji dengan
+mengacak urutan, hasilnya berubah:
+
+    --- FAIL: TestListReviews_NewCourseIsEmpty
+        jumlah ulasan = 1, seharusnya 0
+    --- FAIL: TestCreateReview_Success
+        jumlah ulasan setelah dibuat = 2, seharusnya 1
+
+Ini kesalahan kedua yang sengaja ditanam. Penyebabnya satu tiruan repository
+dipakai bersama oleh seluruh test melalui variabel `sharedReviews`. Test yang
+berjalan lebih dulu meninggalkan sisa data, lalu test berikutnya menemukannya.
+
+Ini mengajarkan sesuatu yang penting: test yang bergantung pada urutan bukan
+test yang baik, karena hasilnya tidak menentu. Modul memang menyuruh kita
+menggunakan `-shuffle`, dan di situlah kesalahan ini baru terlihat.
+
+Setelah setiap test membuat tiruannya sendiri, uji diulang dengan pengacakan
+tiga kali dan semuanya lulus.
+
+Commit: `tambah test service ulasan lewat HTTP`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
@@ -117,6 +155,7 @@ gejala, akar masalah, dan cara memperbaikinya.
 | No | Lokasi | Gejala | Akar masalah | Perbaikan | Ketahuan dari |
 |---|---|---|---|---|---|
 | 1 | `app/service/review_rules_test.go`, fungsi `TestNormalizeTags` | kode tidak bisa diperiksa, muncul pesan `wrong signature for TestNormalizeTags` | tanda tangan fungsi memakai `t testing.T` berupa nilai, sedangkan kerangka test Go menghendaki `t *testing.T` berupa alamat | tambahkan tanda bintang menjadi `func TestNormalizeTags(t *testing.T)` | compiler |
+| 2 | `app/service/review_service_test.go`, variabel `sharedReviews` | test lulus bila dijalankan berurutan, tetapi gagal bila urutannya diacak | satu tiruan repository dipakai bersama oleh seluruh test, sehingga test yang berjalan lebih dulu meninggalkan sisa data yang mengganggu test berikutnya | setiap test kini membuat tiruannya sendiri melalui `newFakeReviewRepo()` | uji dengan `-shuffle` |
 
 ---
 
