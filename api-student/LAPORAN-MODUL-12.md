@@ -204,6 +204,43 @@ Setelah diperbaiki, ketiga skenario lulus.
 
 Commit: `tambah test worker pengirim kabar`
 
+### 2.8 Penyiapan integration test
+
+Berkas: `tests/integration/main_test.go`
+
+Bagian ini berbeda dari yang tadi. Ia berbicara dengan PostgreSQL sungguhan,
+bukan tiruan. Karena itu diletakkan di folder tersendiri dan diberi penjaga
+supaya tidak ikut terjalankan saat kita hanya menjalankan test biasa.
+
+Ada dua pengaman yang menarik. Yang pertama, nama database harus berakhiran
+`_test`, supaya salah ketik di berkas pengaturan tidak pernah menyentuh
+database yang sedang dipakai untuk bekerja. Yang kedua, koneksi dibatasi satu
+saja, supaya uji konkurensi benar-benar berjalan serentak, bukan bergantian.
+
+Di sini muncul kesalahan kelima. Saat alamat database belum diisi, test seharusnya
+melewatkan diri dengan tenang. Kondisinya menulis:
+
+    if dsn != "" {
+        fmt.Println("TEST_DATABASE_URL tidak diisi: integration test dilewati")
+        os.Exit(0)
+    }
+
+Logikanya terbalik. Kondisi itu berbunyi "kalau alamatnya ada, keluar", padahal
+yang dimaksud "kalau alamatnya kosong, lewati". Akibatnya, saat alamat belum
+diisi, test tidak berhenti dengan baik dan justru gagal di tempat lain:
+
+    menolak berjalan: database "" tidak berakhiran _test
+    FAIL
+
+Pesan itu membingungkan, karena yang seharusnya muncul adalah:
+
+    TEST_DATABASE_URL tidak diisi: integration test dilewati
+
+Setelah diganti menjadi `if dsn == ""`, test kini melewatkan diri dengan tenang
+dan menampilkan pesan yang benar.
+
+Commit: `tambah penyiapan integration test`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
@@ -217,6 +254,7 @@ gejala, akar masalah, dan cara memperbaikinya.
 | 2 | `app/service/review_service_test.go`, variabel `sharedReviews` | test lulus bila dijalankan berurutan, tetapi gagal bila urutannya diacak | satu tiruan repository dipakai bersama oleh seluruh test, sehingga test yang berjalan lebih dulu meninggalkan sisa data yang mengganggu test berikutnya | setiap test kini membuat tiruannya sendiri melalui `newFakeReviewRepo()` | uji dengan `-shuffle` |
 | 3 | `app/service/review_errors_test.go` | kode tidak bisa diperiksa, muncul `undefined: service.translateReviewError` | test ditulis berpaket `service_test` yang bersifat black-box, tetapi memanggil `translateReviewError` yang tidak di-export. Keduanya bertentangan | test dipindahkan ke paket `service` supaya boleh memanggil fungsinya | compiler |
 | 4 | `app/service/notification_worker_test.go`, fungsi `TestHandleSend_PermanentFailures` | ketiga skenario lulus uji justru dinyatakan gagal, padahal keluaran menunjukkan `skip retry for the task: ...` | pemeriksaan memakai `err != asynq.SkipRetry`, padahal error sudah terbungkus sehingga perlu `errors.Is`. Komentar di atasnya sendiri sudah mengingatkan hal ini | ganti menjadi `errors.Is(err, asynq.SkipRetry)` | uji langsung |
+| 5 | `tests/integration/main_test.go`, fungsi `TestMain` | saat alamat database belum diisi, test tidak berhenti dengan baik dan justru gagal dengan `menolak berjalan: database "" tidak berakhiran _test` | kondisi penjaga memakai `if dsn != ""`, terbalik dari maksudnya. Seharusnya `if dsn == ""` supaya test melewatkan diri ketika alamatnya kosong | ganti menjadi `if dsn == ""` | uji langsung |
 
 ---
 
