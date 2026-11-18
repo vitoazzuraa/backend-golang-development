@@ -39,6 +39,28 @@ Tidak ada kesalahan yang ditanam di bagian ini. Fungsi `WithinCreditLimit` dan
 
 Commit: `tambah test aturan batas sks dan pindah kelas`
 
+### 2.2 Test normalisasi tag
+
+Berkas: `app/service/review_rules_test.go`
+
+Berkas ini menguji fungsi `NormalizeTags` yang kita buat untuk menutupi
+kekurangan sejak modul ulasan. Fungsinya membersihkan tag sebelum disimpan:
+membuang spasi di tepi, mengubah ke huruf kecil, menghapus yang kosong, dan
+menghapus yang kembar sambil mempertahankan urutan kemunculan pertama.
+
+Waktu berkas ini pertama kali disalin dari modul apa adanya, kodenya tidak bisa
+diperiksa. Pesan yang muncul:
+
+    wrong signature for TestNormalizeTags, must be: func TestNormalizeTags(t *testing.T)
+
+Ternyata tanda tangan fungsinya memakai `t testing.T`, yaitu salinan struct,
+padahal yang diperlukan adalah `t *testing.T`, yaitu alamat struct. Ini
+kesalahan pertama yang sengaja ditanam di modul ini.
+
+Setelah diperbaiki, enam subtest semuanya lulus.
+
+Commit: `tambah test normalisasi tag`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
@@ -48,7 +70,7 @@ gejala, akar masalah, dan cara memperbaikinya.
 
 | No | Lokasi | Gejala | Akar masalah | Perbaikan | Ketahuan dari |
 |---|---|---|---|---|---|
-| (belum ada) | | | | | |
+| 1 | `app/service/review_rules_test.go`, fungsi `TestNormalizeTags` | kode tidak bisa diperiksa, muncul pesan `wrong signature for TestNormalizeTags` | tanda tangan fungsi memakai `t testing.T` berupa nilai, sedangkan kerangka test Go menghendaki `t *testing.T` berupa alamat | tambahkan tanda bintang menjadi `func TestNormalizeTags(t *testing.T)` | compiler |
 
 ---
 
