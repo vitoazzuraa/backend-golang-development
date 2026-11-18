@@ -272,6 +272,33 @@ terpisah. Fungsinya sama, hanya bentuk pembungkusannya yang berbeda.
 
 Commit: `tambah integration test repository kelas dan notifikasi`
 
+### 2.10 Integration test endpoint pendaftaran
+
+Berkas: `tests/integration/enroll_api_test.go`
+
+Berkas ini menguji endpoint pendaftaran kelas secara utuh, dari permintaan HTTP
+sampai ke database, memakai aplikasi lengkap dengan middleware dan route yang
+sama dengan produksi.
+
+Ada dua test. Yang pertama memastikan catatan outbox hanya muncul untuk
+pendaftaran yang berhasil. Ia mendaftar dua kali, yang kedua harus ditolak,
+lalu memastikan catatan di outbox tetap satu. Ini versi otomatis dari hal yang
+dulu saya temukan pada Modul 9, yaitu pendaftaran yang gagal tidak boleh
+meninggalkan jejak.
+
+Yang kedua lebih menarik. Sepuluh pendaftaran dikirim secara serentak kepada
+sepuluh kelas, dan batasnya adalah 24 SKS. Karena tiap kelas 3 SKS, tepat delapan
+yang boleh berhasil. Test ini memakai goroutine dan kanal sebagai aba-aba,
+supaya seluruh permintaan benar-benar berangkat pada saat yang sama.
+
+Ini adalah versi otomatis dari uji beban mode credits yang dulu saya jalankan
+manual dengan alat uji beban pada Modul 9. Sekarang hasilnya bisa diperiksa
+kapan saja hanya dengan satu perintah.
+
+Hasil pengujian: 6 integration test, semuanya lulus dengan database sungguhan.
+
+Commit: `tambah integration test endpoint pendaftaran`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
