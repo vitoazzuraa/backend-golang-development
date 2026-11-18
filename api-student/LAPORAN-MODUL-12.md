@@ -61,6 +61,25 @@ Setelah diperbaiki, enam subtest semuanya lulus.
 
 Commit: `tambah test normalisasi tag`
 
+### 2.3 Test penyusun pesan notifikasi
+
+Berkas: `app/service/notification_rules_test.go`
+
+Berkas ini menguji `BuildMessage`, yaitu fungsi yang menyusun pesan yang akan
+dikirim kepada mahasiswa. Tiga kejadian diuji: berhasil terdaftar, keluar dari
+kelas, dan pindah kelas. Ditambah satu pengujian untuk kejadian yang tidak
+dikenal, yang harus mengembalikan error khusus.
+
+Setiap pesan diperiksa tiga hal: subjeknya persis, alamat tujuannya benar, dan
+isinya menyebut nama penggunanya.
+
+Hasil pengujian: 4 subtest, semuanya lulus.
+
+Tidak ada kesalahan yang ditanam di bagian ini. Bentuknya sudah sesuai dengan
+modul.
+
+Commit: `tambah test penyusun pesan notifikasi`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
