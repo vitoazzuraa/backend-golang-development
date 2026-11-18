@@ -80,6 +80,33 @@ modul.
 
 Commit: `tambah test penyusun pesan notifikasi`
 
+### 2.4 Tiruan repository untuk unit test
+
+Berkas: `app/service/fakes_test.go`
+
+Berkas ini berisi tiruan repository, yaitu pengganti MongoDB dan PostgreSQL yang
+menyimpan datanya di memori. Tujuannya supaya test bisa berjalan cepat tanpa
+perlu database sungguhan.
+
+Ada dua tiruan. Yang pertama untuk ulasan, yang menyimpan data di dalam potong
+memori dan memakai pengunci karena Fiber melayani permintaan pada goroutine yang
+berbeda. Yang kedua untuk kelas, yang hanya mengisi dua metode yang dipakai.
+
+Ada satu baris yang menarik di awal berkas:
+
+    var _ repository.ReviewRepository = (*fakeReviewRepo)(nil)
+
+Baris ini memeriksa saat dikompilasi apakah tiruannya benar-benar memenuhi
+interface yang ditiru. Kalau suatu hari bentuknya berubah, baris inilah yang
+pertama kali gagal, bukan test yang memakainya.
+
+Satu perbedaan dari modul yang perlu dicatat: modul memanggil `FindByCourse`
+dengan `courseID int`, sedangkan kode kita memakai `model.ReviewQuery`. Ini
+ternyata ketidakkonsistenan dalam modulnya sendiri, karena Modul 10 memang
+memakai `model.ReviewQuery`. Jadi tiruannya yang mengikuti bentuk Modul 10.
+
+Commit: `tambah tiruan repository untuk unit test`
+
 ---
 
 ## 3. Daftar kesalahan yang sengaja ditanam
@@ -100,7 +127,7 @@ belajar. Bukan kesalahan yang harus dibereskan.
 
 | No | Bagian | Modul | Kode kita | Alasan |
 |---|---|---|---|---|
-| (belum ada) | | | | |
+| 1 | `FindByCourse` pada `fakeReviewRepo` | `FindByCourse(ctx, courseID int)` | `FindByCourse(ctx, q model.ReviewQuery)` | Modul 10 memakai `model.ReviewQuery`, jadi kode kita sudah sesuai Modul 10. Modul 12 yang tidak konsisten dengan modul sebelumnya, jadi tiruannya yang mengikuti kita |
 
 ---
 
