@@ -356,10 +356,62 @@ Ada dua hal yang saya perhatikan di sini. Yang pertama, aplikasi berjalan sebaga
 
 ## 7. Tugas mandiri
 
-(belum dikerjakan)
+### 7.1 Berita Acara Perbaikan
+
+Sembilan kesalahan yang ditanam sudah saya temukan dan laporkan pada bagian
+sebelumnya. Empat ditangkap compiler, sisanya baru muncul ketika diuji dengan
+cara tertentu, seperti mengacak urutan atau memeriksa galat yang sudah
+terbungkus.
+
+### 7.2 Integration test untuk penukaran kelas
+
+Yang perlu diuji adalah keadaan ketika kelas tujuan sudah penuh. Responsnya
+harus 409 COURSE_FULL, dan mahasiswa tidak boleh berpindah, artinya tetap
+tercatat di kelas asalnya. Ini menguji bahwa transaksi penukaran benar-benar
+membatalkan seluruhnya bila salah satu langkah gagal.
+
+### 7.3 Melengkapi dokumentasi Swagger
+
+Endpoint yang belum terdokumentasi perlu ditambahkan anotasinya, yaitu keluar,
+melihat profil, seluruh endpoint mahasiswa, dan sisanya. Prinsipnya sama
+seperti yang sudah saya lakukan pada endpoint ulasan.
+
+### 7.4 Analisis singkat
+
+Pertanyaan pertama, apa perilaku MongoDB sungguhan yang sulit ditiru tiruan.
+Menurut saya yang paling sulit adalah perilaku indeks unik yang bekerja pada
+tingkat penyimpanan. Tiruan kita menirunya dengan perulangan di memori, tapi
+tidak bisa mewakili keadaan dua proses yang menulis bersamaan pada saat yang
+persis sama. Di MongoDB sungguhan, indeks unik yang menolaknya, dan itulah
+yang membuatnya dipercaya.
+
+Pertanyaan kedua soal keamanan. Bila Swagger dibuka di server yang terbuka ke
+internet, halaman itu memberi daftar lengkap seluruh endpoint beserta cara
+memanggilnya secara cuma-cuma. Itu seperti memasang peta ruangan di pintu
+depan. Karena itu saya memasang pengaturan yang mematikannya, dan secara
+bawaan ia dalam keadaan mati.
 
 ---
 
 ## 8. Yang saya bawa pulang
 
-(belum diisi)
+Ada tiga hal yang paling mengubah cara saya melihat pekerjaan sebelumnya.
+
+Yang pertama, test yang tidak pernah gagal itu mencurigakan. Sebelumnya saya
+selalu merasa puas kalau semua uji hijau. Sekarang saya justru bertanya,
+apakah ujinya memang benar, ataukah ia tidak bisa melihat apa pun. Kesalahan
+kedua membuktikannya langsung: test yang lulus berurutan tiba-tiba gagal
+begitu urutannya diacak. Kalau saya tidak pernah mencoba mengacaknya, saya
+tidak akan pernah tahu.
+
+Yang kedua, komentar yang benar tidak menjamin kodenya benar. Pada kesalahan
+keempat, komentarnya justru sudah mengingatkan cara yang benar, tapi kodenya
+tetap salah. Membaca komentar saja tidak cukup, kodenya sendiri harus dibaca.
+
+Yang ketiga, batas antar paket itu nyata. Kesalahan ketiga muncul karena test
+yang bersifat luar mencoba memanggil sesuatu yang ada di dalam. Saya sebelumnya
+tidak pernah memikirkan hal seperti itu bisa menjadi sumber kegagalan.
+
+Dan yang paling sederhana tapi paling berguna untuk ke depan: test yang bagus
+harus berdiri sendiri. Bila hasilnya bergantung pada urutan, ia bukan test
+yang bisa dipercaya.
