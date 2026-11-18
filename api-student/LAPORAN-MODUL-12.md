@@ -330,13 +330,27 @@ belajar. Bukan kesalahan yang harus dibereskan.
 
 ## 5. Bagian Swagger
 
-(belum dikerjakan)
+Swagger adalah cara mendokumentasikan API supaya orang lain tahu endpoint apa saja yang tersedia tanpa harus membaca kode. Swag membaca komentar berawalan @ di atas fungsi, lalu menyusunnya menjadi berkas dokumentasi.
+
+Ini satu-satunya bagian di mana kita diizinkan menulis komentar di kode, karena memang begitu cara kerjanya.
+
+Saya memasang gofiber/swagger lalu menambahkan anotasi untuk delapan endpoint ulasan. Setelah dijalankan swag, terbentuk tiga berkas: docs.go, swagger.json, dan swagger.yaml.
+
+Yang perlu diperhatikan, tampilannya harus bisa dimatikan di lingkungan produksi, karena halaman Swagger adalah peta lengkap yang diberikan gratis kepada penyerang. Karena itu saya buat tergantung pengaturan SWAGGER_ENABLED.
 
 ---
 
 ## 6. Bagian Docker
 
-(belum dikerjakan)
+Bagian ini membungkus seluruh sistem supaya bisa dijalankan di mana saja. Ada tiga berkas yang dibuat.
+
+Dockerfile memakai dua tahap. Tahap pertama menyusun program dengan image Go, tahap kedua hanya menyalin hasilnya ke image Alpine yang kecil. Dengan begitu image akhirnya bersih, tidak memuat kode sumber maupun alat penyusun.
+
+.dockerignore memastikan berkas rahasia seperti .env tidak ikut terbawa ke dalam image.
+
+docker-compose.yml menyatukan lima layanan: api, worker, postgres, mongo, dan redis. Semuanya bisa dinyalakan dengan satu perintah.
+
+Ada dua hal yang saya perhatikan di sini. Yang pertama, aplikasi berjalan sebagai pengguna biasa, bukan root, demi keamanan. Yang kedua, isi image harus hanya berisi programnya saja, tidak boleh ada .env maupun kode sumber.
 
 ---
 
